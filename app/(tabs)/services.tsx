@@ -7,31 +7,25 @@ import { colors, radius } from "@/constants/theme";
 import { useCart } from "@/contexts/CartContext";
 
 const { width } = Dimensions.get("window");
+const TILE_W = (width - 32 - 8) / 2;
 
-const IMG_PSN    = require("../../assets/PlayStation_Store_Card.png");
-const IMG_ITU    = require("../../assets/itunes-gifts-for-business-hero_2x.jpg");
-const IMG_ROB    = require("../../assets/App-icon-roblox.webp");
-const IMG_CRYPTO = require("../../assets/Monnaie Crypto Chreol Empire en cfa mobile money.png");
-const IMG_UBA    = require("../../assets/UBA Cameroun logo.png");
-const IMG_TRANS  = require("../../assets/contenu-pack-transcash.jpg");
+const IMG_PSN     = require("../../assets/PlayStation_Store_Card.png");
+const IMG_ITU     = require("../../assets/itunes-gifts-for-business-hero_2x.jpg");
+const IMG_ROB     = require("../../assets/App-icon-roblox.webp");
+const IMG_STEAM   = require("../../assets/Steam_Gift_Cards.png");
+const IMG_CRYPTO  = require("../../assets/Monnaie Crypto Chreol Empire en cfa mobile money.png");
+const IMG_UBA     = require("../../assets/UBA Cameroun logo.png");
+const IMG_TRANS   = require("../../assets/contenu-pack-transcash.jpg");
+const IMG_GOOGLE  = require("../../assets/Gift card GooglePlay.png");
 
-const HERO_TILES = [
-  { img: IMG_PSN, label: "PSN" },
-  { img: IMG_ITU, label: "iTunes" },
-  { img: IMG_ROB, label: "Roblox" },
-  { img: IMG_CRYPTO, label: "Crypto" },
+const PRODUCT_TILES = [
+  { img: IMG_ROB,    label: "Roblox",      route: "/services/cartes-cadeaux" },
+  { img: IMG_PSN,    label: "PSN",         route: "/services/cartes-cadeaux" },
+  { img: IMG_ITU,    label: "iTunes",      route: "/services/cartes-cadeaux" },
+  { img: IMG_STEAM,  label: "Steam",       route: "/services/cartes-cadeaux" },
 ];
 
-const CATEGORIES = [
-  {
-    id: "cartes-cadeaux",
-    title: "Cartes Cadeaux",
-    sub: "PSN · iTunes · Roblox · Steam",
-    icon: "🎮",
-    color: "#003791",
-    img: IMG_PSN,
-    route: "/services/cartes-cadeaux",
-  },
+const OTHER_SERVICES = [
   {
     id: "uba",
     title: "UBA Cameroun",
@@ -69,75 +63,105 @@ export default function ServicesScreen() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView showsVerticalScrollIndicator={false}>
 
-        {/* Hero */}
+        {/* ── HERO ── */}
         <MotiView
-          from={{ opacity: 0, translateY: -16 }}
+          from={{ opacity: 0, translateY: -12 }}
           animate={{ opacity: 1, translateY: 0 }}
           transition={{ type: "timing", duration: 500 }}
           style={styles.hero}
         >
-          {/* Left panel */}
-          <View style={styles.heroLeft}>
+          {/* Warm accent glow */}
+          <View style={styles.heroGlow} />
+
+          {/* Top row: badge + card image */}
+          <View style={styles.heroTop}>
             <View style={styles.heroBadge}>
-              <Text style={styles.heroBadgeText}>🇨🇲 Douala, Cameroun</Text>
+              <Text style={styles.heroBadgeIcon}>🛡️</Text>
+              <Text style={styles.heroBadgeText}>Magasin officiel</Text>
             </View>
-            <Text style={styles.heroTitle}>Services{"\n"}Digitaux</Text>
-            <Text style={styles.heroSub}>Livraison express{"\n"}15–30 min</Text>
-            <TouchableOpacity
-              style={styles.heroCta}
-              onPress={() => router.push("/services/cartes-cadeaux")}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.heroCtaText}>Commander →</Text>
-            </TouchableOpacity>
+            <Image source={IMG_ROB} style={styles.heroCardImg} contentFit="cover" />
           </View>
 
-          {/* Right: 2×2 tiles */}
-          <View style={styles.heroGrid}>
-            {HERO_TILES.map((tile, i) => (
-              <View key={i} style={styles.heroTile}>
-                <Image source={tile.img} style={styles.heroTileImg} contentFit="cover" />
-                <View style={styles.heroTileOverlay} />
-                <Text style={styles.heroTileLabel}>{tile.label}</Text>
+          {/* Title */}
+          <Text style={styles.heroTitle}>
+            Achetez vos cartes cadeaux{"\n"}en toute sécurité au Cameroun
+          </Text>
+
+          {/* Bullets */}
+          <View style={styles.heroBullets}>
+            {[
+              "Livraison express 15–30 min",
+              "Codes authentiques garantis",
+              "Support WhatsApp 7j/7",
+            ].map((b, i) => (
+              <View key={i} style={styles.heroBullet}>
+                <Text style={styles.heroBulletCheck}>✅</Text>
+                <Text style={styles.heroBulletText}>{b}</Text>
               </View>
             ))}
           </View>
+
+          {/* CTA */}
+          <TouchableOpacity
+            style={styles.heroCta}
+            onPress={() => router.push("/services/cartes-cadeaux")}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.heroCtaText}>Voir le catalogue  →</Text>
+          </TouchableOpacity>
         </MotiView>
 
-        {/* Highlight strip */}
-        <View style={styles.strip}>
-          {["✅ 100% Sécurisé", "⚡ Express 30 min", "💳 Mobile Money"].map((item, i) => (
-            <View key={i} style={styles.stripChip}>
-              <Text style={styles.stripText}>{item}</Text>
-            </View>
+        {/* ── PRODUCT TILES 2×2 ── */}
+        <Text style={styles.sectionTitle}>Cartes Cadeaux</Text>
+        <View style={styles.tileGrid}>
+          {PRODUCT_TILES.map((tile, i) => (
+            <MotiView
+              key={i}
+              from={{ opacity: 0, scale: 0.92 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ type: "spring", delay: i * 60, damping: 18 }}
+            >
+              <TouchableOpacity
+                style={styles.tile}
+                onPress={() => router.push(tile.route as any)}
+                activeOpacity={0.88}
+              >
+                <Image source={tile.img} style={StyleSheet.absoluteFillObject} contentFit="cover" />
+                <View style={styles.tileOverlay} />
+                <View style={styles.tileBottom}>
+                  <Text style={styles.tileLabel}>{tile.label}</Text>
+                  <Text style={styles.tileArrow}>›</Text>
+                </View>
+              </TouchableOpacity>
+            </MotiView>
           ))}
         </View>
 
-        {/* Categories */}
-        <Text style={styles.sectionTitle}>Nos Services</Text>
-        <View style={styles.catGrid}>
-          {CATEGORIES.map((cat, i) => (
+        {/* ── OTHER SERVICES ── */}
+        <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Autres Services</Text>
+        <View style={styles.serviceList}>
+          {OTHER_SERVICES.map((s, i) => (
             <MotiView
-              key={cat.id}
-              from={{ opacity: 0, scale: 0.92 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ type: "spring", delay: i * 80, damping: 16 }}
+              key={s.id}
+              from={{ opacity: 0, translateX: -16 }}
+              animate={{ opacity: 1, translateX: 0 }}
+              transition={{ type: "timing", delay: i * 80, duration: 350 }}
             >
               <TouchableOpacity
-                style={styles.catCard}
-                onPress={() => router.push(cat.route as any)}
+                style={styles.serviceCard}
+                onPress={() => router.push(s.route as any)}
                 activeOpacity={0.88}
               >
-                <View style={[styles.catImgWrap, { borderColor: cat.color + "55" }]}>
-                  <Image source={cat.img} style={styles.catImg} contentFit="cover" />
-                  <View style={[styles.catImgOverlay, { backgroundColor: cat.color + "33" }]} />
-                  <Text style={styles.catIcon}>{cat.icon}</Text>
+                <View style={[styles.serviceImgWrap, { borderColor: s.color + "55" }]}>
+                  <Image source={s.img} style={StyleSheet.absoluteFillObject} contentFit="cover" />
+                  <View style={[styles.serviceImgOverlay, { backgroundColor: s.color + "33" }]} />
+                  <Text style={styles.serviceIcon}>{s.icon}</Text>
                 </View>
-                <View style={styles.catBody}>
-                  <Text style={styles.catTitle}>{cat.title}</Text>
-                  <Text style={styles.catSub}>{cat.sub}</Text>
+                <View style={styles.serviceBody}>
+                  <Text style={styles.serviceTitle}>{s.title}</Text>
+                  <Text style={styles.serviceSub}>{s.sub}</Text>
                 </View>
-                <Text style={styles.catArrow}>›</Text>
+                <Text style={styles.serviceArrow}>›</Text>
               </TouchableOpacity>
             </MotiView>
           ))}
@@ -154,16 +178,14 @@ export default function ServicesScreen() {
           activeOpacity={0.88}
         >
           <Text style={styles.cartFabIcon}>🛒</Text>
-          <View style={styles.cartFabCount}>
-            <Text style={styles.cartFabCountText}>{count}</Text>
+          <View style={styles.cartFabBadge}>
+            <Text style={styles.cartFabBadgeText}>{count}</Text>
           </View>
         </TouchableOpacity>
       )}
     </SafeAreaView>
   );
 }
-
-const TILE_SIZE = (width - 48 - 8) / 2 / 2;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg.primary },
@@ -173,93 +195,105 @@ const styles = StyleSheet.create({
     margin: 16,
     borderRadius: radius["2xl"],
     backgroundColor: colors.bg.card,
-    flexDirection: "row",
+    padding: 20,
     overflow: "hidden",
     borderWidth: 1,
     borderColor: colors.border.strong,
-    minHeight: 200,
+    gap: 14,
   },
-  heroLeft: {
-    flex: 1,
-    padding: 18,
-    gap: 10,
-    justifyContent: "center",
+  heroGlow: {
+    position: "absolute",
+    top: -60, right: -60,
+    width: 200, height: 200,
+    borderRadius: 100,
+    backgroundColor: colors.brand.gold,
+    opacity: 0.08,
+  },
+  heroTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   heroBadge: {
-    backgroundColor: colors.brand.goldLight,
-    borderRadius: radius.full,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    alignSelf: "flex-start",
-    borderWidth: 1,
-    borderColor: colors.brand.gold + "44",
-  },
-  heroBadgeText: { fontSize: 10, color: colors.brand.goldDark, fontWeight: "700" },
-  heroTitle: { fontSize: 22, fontWeight: "900", color: colors.text.primary, lineHeight: 26 },
-  heroSub: { fontSize: 12, color: colors.text.secondary, lineHeight: 18 },
-  heroCta: {
-    backgroundColor: colors.brand.gold,
-    borderRadius: radius.full,
-    paddingHorizontal: 16,
-    paddingVertical: 9,
-    alignSelf: "flex-start",
-    shadowColor: colors.brand.gold,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  heroCtaText: { fontSize: 13, fontWeight: "800", color: "#0A0A0A" },
-
-  heroGrid: {
-    width: (width - 32) * 0.42,
     flexDirection: "row",
-    flexWrap: "wrap",
-    padding: 8,
-    gap: 6,
-    alignContent: "center",
-  },
-  heroTile: {
-    width: TILE_SIZE,
-    height: TILE_SIZE,
-    borderRadius: radius.md,
-    overflow: "hidden",
     alignItems: "center",
-    justifyContent: "flex-end",
-  },
-  heroTileImg: { ...StyleSheet.absoluteFillObject },
-  heroTileOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.45)" },
-  heroTileLabel: { fontSize: 9, fontWeight: "800", color: "#fff", paddingBottom: 4, zIndex: 1 },
-
-  // Strip
-  strip: {
-    flexDirection: "row",
-    paddingHorizontal: 16,
-    gap: 8,
-    marginBottom: 20,
-    flexWrap: "wrap",
-  },
-  stripChip: {
-    backgroundColor: colors.bg.elevated,
+    gap: 6,
+    backgroundColor: colors.brand.gold,
     borderRadius: radius.full,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: colors.border.default,
   },
-  stripText: { fontSize: 11, color: colors.text.secondary, fontWeight: "600" },
+  heroBadgeIcon: { fontSize: 13 },
+  heroBadgeText: { fontSize: 12, fontWeight: "800", color: "#0A0A0A" },
+  heroCardImg: {
+    width: 90,
+    height: 65,
+    borderRadius: radius.md,
+    overflow: "hidden",
+  },
+  heroTitle: {
+    fontSize: 20,
+    fontWeight: "900",
+    color: colors.text.primary,
+    lineHeight: 27,
+  },
+  heroBullets: { gap: 6 },
+  heroBullet: { flexDirection: "row", alignItems: "center", gap: 8 },
+  heroBulletCheck: { fontSize: 13 },
+  heroBulletText: { fontSize: 13, color: colors.text.secondary, flex: 1 },
+  heroCta: {
+    backgroundColor: colors.brand.gold,
+    borderRadius: radius.full,
+    paddingVertical: 13,
+    alignItems: "center",
+    shadowColor: colors.brand.gold,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  heroCtaText: { fontSize: 14, fontWeight: "800", color: "#0A0A0A" },
 
+  // Section title
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "800",
     color: colors.text.primary,
     paddingHorizontal: 16,
-    marginBottom: 12,
+    marginBottom: 10,
   },
 
-  // Category cards
-  catGrid: { paddingHorizontal: 16, gap: 10 },
-  catCard: {
+  // Product tiles 2×2
+  tileGrid: {
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  tile: {
+    width: TILE_W,
+    height: 130,
+    borderRadius: radius.xl,
+    overflow: "hidden",
+    justifyContent: "flex-end",
+  },
+  tileOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.45)",
+  },
+  tileBottom: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 12,
+    paddingBottom: 10,
+  },
+  tileLabel: { fontSize: 14, fontWeight: "800", color: "#fff" },
+  tileArrow: { fontSize: 20, color: "#fff", fontWeight: "700" },
+
+  // Other services list
+  serviceList: { paddingHorizontal: 16, gap: 10 },
+  serviceCard: {
     backgroundColor: colors.bg.card,
     borderRadius: radius.xl,
     flexDirection: "row",
@@ -269,32 +303,28 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border.default,
   },
-  catImgWrap: {
-    width: 64,
-    height: 64,
+  serviceImgWrap: {
+    width: 60, height: 60,
     borderRadius: radius.lg,
     overflow: "hidden",
     borderWidth: 1.5,
     alignItems: "center",
     justifyContent: "center",
   },
-  catImg: { ...StyleSheet.absoluteFillObject },
-  catImgOverlay: { ...StyleSheet.absoluteFillObject },
-  catIcon: { fontSize: 22, zIndex: 1 },
-  catBody: { flex: 1 },
-  catTitle: { fontSize: 15, fontWeight: "800", color: colors.text.primary },
-  catSub: { fontSize: 12, color: colors.text.secondary, marginTop: 3 },
-  catArrow: { fontSize: 22, color: colors.brand.gold, fontWeight: "700" },
+  serviceImgOverlay: { ...StyleSheet.absoluteFillObject },
+  serviceIcon: { fontSize: 22, zIndex: 1 },
+  serviceBody: { flex: 1 },
+  serviceTitle: { fontSize: 15, fontWeight: "800", color: colors.text.primary },
+  serviceSub: { fontSize: 12, color: colors.text.secondary, marginTop: 3 },
+  serviceArrow: { fontSize: 22, color: colors.brand.gold, fontWeight: "700" },
 
   // Cart FAB
   cartFab: {
     position: "absolute",
-    bottom: 20,
-    right: 20,
+    bottom: 20, right: 20,
     backgroundColor: colors.brand.gold,
     borderRadius: radius.full,
-    width: 56,
-    height: 56,
+    width: 56, height: 56,
     alignItems: "center",
     justifyContent: "center",
     shadowColor: colors.brand.gold,
@@ -303,18 +333,16 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 8,
   },
-  cartFabIcon: { fontSize: 22 },
-  cartFabCount: {
+  cartFabIcon: { fontSize: 24 },
+  cartFabBadge: {
     position: "absolute",
-    top: 6,
-    right: 6,
+    top: 6, right: 6,
     backgroundColor: "#E50914",
     borderRadius: 10,
-    minWidth: 18,
-    height: 18,
+    minWidth: 18, height: 18,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 4,
+    paddingHorizontal: 3,
   },
-  cartFabCountText: { color: "#fff", fontSize: 10, fontWeight: "800" },
+  cartFabBadgeText: { color: "#fff", fontSize: 10, fontWeight: "800" },
 });

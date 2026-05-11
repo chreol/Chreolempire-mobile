@@ -72,6 +72,19 @@ const STANDARD_AMOUNTS = [
   { label: "500€", price: 340000 },
 ];
 
+const ITUNES_GP_AMOUNTS = [
+  { label: "5€",   price: 4000 },
+  { label: "10€",  price: 7500 },
+  { label: "15€",  price: 11000 },
+  { label: "25€",  price: 18000 },
+  { label: "50€",  price: 35000 },
+  { label: "100€", price: 68500 },
+  { label: "150€", price: 102000 },
+  { label: "200€", price: 135000 },
+  { label: "300€", price: 204000 },
+  { label: "500€", price: 340000 },
+];
+
 export const GIFT_CARDS = [
   {
     id: "psn",
@@ -84,7 +97,7 @@ export const GIFT_CARDS = [
   {
     id: "steam",
     name: "Steam",
-    localImage: "psn" as const,
+    localImage: "steam" as const,
     color: "#1B2838",
     tier: "standard" as const,
     amounts: STANDARD_AMOUNTS,
@@ -92,7 +105,7 @@ export const GIFT_CARDS = [
   {
     id: "razer",
     name: "Razer Gold",
-    localImage: "psn" as const,
+    localImage: "razer" as const,
     color: "#44D62C",
     tier: "standard" as const,
     amounts: STANDARD_AMOUNTS,
@@ -108,25 +121,26 @@ export const GIFT_CARDS = [
   {
     id: "nintendo",
     name: "Nintendo eShop",
-    localImage: "psn" as const,
+    localImage: "nintendo" as const,
     color: "#E70012",
     tier: "standard" as const,
     amounts: STANDARD_AMOUNTS,
   },
   {
     id: "itunes",
-    name: "iTunes / Google Play",
+    name: "iTunes / App Store",
     localImage: "itunes" as const,
     color: "#0A84FF",
     tier: "itunes" as const,
-    amounts: [
-      { label: "5€",   price: 4000 },
-      { label: "10€",  price: 7500 },
-      { label: "15€",  price: 11000 },
-      { label: "25€",  price: 18000 },
-      { label: "50€",  price: 35000 },
-      { label: "100€", price: 68500 },
-    ],
+    amounts: ITUNES_GP_AMOUNTS,
+  },
+  {
+    id: "googleplay",
+    name: "Google Play",
+    localImage: "googleplay" as const,
+    color: "#34A853",
+    tier: "itunes" as const,
+    amounts: ITUNES_GP_AMOUNTS,
   },
   {
     id: "robux",
