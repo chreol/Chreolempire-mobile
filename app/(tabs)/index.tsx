@@ -1,314 +1,484 @@
-import { useState, useMemo } from "react";
 import {
-  View, Text, TextInput, ScrollView, StyleSheet,
-  TouchableOpacity, FlatList, Dimensions,
+  View, Text, ScrollView, StyleSheet, TouchableOpacity,
+  Linking, Dimensions, Modal, TextInput,
+  KeyboardAvoidingView, Platform, Pressable,
 } from "react-native";
-import { FlashList } from "@shopify/flash-list";
+import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MotiView } from "moti";
 import { useRouter } from "expo-router";
-import { useAuth } from "@/hooks/useAuth";
-import ProductCard from "@/components/ProductCard";
-import SkeletonCard from "@/components/SkeletonCard";
-import { PRODUCTS, CATEGORIES } from "@/constants/products";
+import { MotiView } from "moti";
+import { useState } from "react";
 import { colors, radius } from "@/constants/theme";
+import { CONTACT } from "@/constants/services";
+import { useAuth } from "@/hooks/useAuth";
+import { useOrders } from "@/hooks/useOrders";
 
 const { width } = Dimensions.get("window");
+const CARD_W = (width - 44) / 2;
 
-const HERO_BANNERS = [
-  {
-    id: "1",
-    title: "Robux en Promo 🎮",
-    subtitle: "400 Robux à 2400 FCFA aujourd'hui seulement",
-    bg: ["#10B981", "#065F46"],
-    emoji: "🟢",
-  },
-  {
-    id: "2",
-    title: "PSN 20€ Disponible ⚡",
-    subtitle: "Livraison en moins de 5 minutes",
-    bg: ["#2563EB", "#1E3A8A"],
-    emoji: "🎮",
-  },
-  {
-    id: "3",
-    title: "Netflix 4K Premium 🎬",
-    subtitle: "Accès immédiat, qualité garantie",
-    bg: ["#E50914", "#7F1D1D"],
-    emoji: "🎬",
-  },
-];
+const LOGO       = require("../../assets/Fond vide logo chreol empire.png");
+const STORE_BG   = require("../../assets/Photo de la boutique bureau de change pcs mastercard et Transcash.png");
+const IMG_PSN    = require("../../assets/PlayStation_Store_Card.png");
+const IMG_ITU    = require("../../assets/itunes-gifts-for-business-hero_2x.jpg");
+const IMG_ROB    = require("../../assets/App-icon-roblox.webp");
+const IMG_UBA    = require("../../assets/UBA Cameroun logo.png");
+const IMG_UBA_CARD = require("../../assets/Carte UBA Cameroun pour RECHARGE.png");
+const IMG_TRANS  = require("../../assets/contenu-pack-transcash.jpg");
+const IMG_CRYPTO = require("../../assets/Monnaie Crypto Chreol Empire en cfa mobile money.png");
 
 export default function HomeScreen() {
-  const { user } = useAuth();
-  const [search, setSearch] = useState("");
-  const [activeCategory, setActiveCategory] = useState("all");
-  const [activeBanner, setActiveBanner] = useState(0);
   const router = useRouter();
+  const { user } = useAuth();
+  const { orders } = useOrders(user?.uid);
 
-  const firstName = user?.displayName?.split(" ")[0] ?? "vous";
+  const [contactOpen, setContactOpen] = useState(false);
+  const [pseudo, setPseudo] = useState("");
+  const [msgText, setMsgText] = useState("");
 
-  const filtered = useMemo(() => {
-    return PRODUCTS.filter((p) => {
-      const matchCat = activeCategory === "all" || p.category === activeCategory;
-      const matchSearch = p.name.toLowerCase().includes(search.toLowerCase());
-      return matchCat && matchSearch;
-    });
-  }, [search, activeCategory]);
+  const openWhatsApp = () =>
+    Linking.openURL(
+      `https://wa.me/${CONTACT.whatsapp}?text=${encodeURIComponent("Bonjour Chreol Empire, je voudrais commander")}`
+    );
 
-  const popular = PRODUCTS.filter((p) => p.popular);
+  const sendContact = () => {
+    if (!pseudo.trim() && !msgText.trim()) return;
+    const txt = `Pseudo: ${pseudo.trim() || "—"}\nMessage: ${msgText.trim()}`;
+    Linking.openURL(`https://wa.me/${CONTACT.whatsapp}?text=${encodeURIComponent(txt)}`);
+    setContactOpen(false);
+    setPseudo("");
+    setMsgText("");
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <ScrollView showsVerticalScrollIndicator={false} stickyHeaderIndices={[1]}>
 
-        {/* Header */}
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.greeting}>Bonjour, {firstName} 👋</Text>
-            <Text style={styles.subGreeting}>Que voulez-vous acheter aujourd&apos;hui ?</Text>
+      {/* ── Header ── */}
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <View style={styles.logoRing}>
+            <Image source={LOGO} style={styles.logo} contentFit="contain" />
           </View>
-          <TouchableOpacity style={styles.avatar} onPress={() => router.push("/(tabs)/profile")}>
-            <Text style={styles.avatarText}>
-              {(user?.displayName ?? "U")[0].toUpperCase()}
+          <View>
+            <Text style={styles.headerTitle}>Chreol Empire</Text>
+            <Text style={styles.headerSlogan} numberOfLines={1}>
+              L'Autorité des Services Digitaux 🇨🇲
             </Text>
+          </View>
+        </View>
+
+        <View style={styles.headerActions}>
+          {/* Contact WhatsApp */}
+          <TouchableOpacity style={styles.waBtn} onPress={() => setContactOpen(true)} activeOpacity={0.85}>
+            <Text style={styles.waBtnText}>💬</Text>
+          </TouchableOpacity>
+          {/* Panier */}
+          <TouchableOpacity style={styles.cartBtn} onPress={() => router.push("/(tabs)/orders")} activeOpacity={0.85}>
+            <Text style={styles.cartEmoji}>🛒</Text>
+            {orders.length > 0 && (
+              <View style={styles.cartBadge}>
+                <Text style={styles.cartBadgeText}>{orders.length > 9 ? "9+" : orders.length}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* ── Modal Contact ── */}
+      <Modal visible={contactOpen} transparent animationType="slide" onRequestClose={() => setContactOpen(false)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => setContactOpen(false)} />
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.modalWrap}>
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHandle} />
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>💬 Contacter via WhatsApp</Text>
+              <Text style={styles.modalSub}>Nous répondons en moins de 5 min</Text>
+            </View>
+
+            <Text style={styles.inputLabel}>Votre pseudo / nom</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Ex: Jean-Pierre"
+              placeholderTextColor={colors.text.muted}
+              value={pseudo}
+              onChangeText={setPseudo}
+              returnKeyType="next"
+            />
+
+            <Text style={styles.inputLabel}>Votre message</Text>
+            <TextInput
+              style={[styles.input, styles.inputMulti]}
+              placeholder="Ex: Je veux acheter une carte PSN 20€..."
+              placeholderTextColor={colors.text.muted}
+              value={msgText}
+              onChangeText={setMsgText}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+            />
+
+            <TouchableOpacity
+              style={[styles.sendBtn, (!pseudo.trim() && !msgText.trim()) && styles.sendBtnDisabled]}
+              onPress={sendContact}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.sendBtnText}>📲 Envoyer sur WhatsApp</Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 130 }}>
+
+        {/* ── Hero Banner (photo seule, sans overlays) ── */}
+        <MotiView
+          from={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ type: "timing", duration: 700 }}
+          style={styles.hero}
+        >
+          <Image source={STORE_BG} style={StyleSheet.absoluteFillObject} contentFit="cover" transition={300} />
+          {/* Léger gradient bas pour lisibilité */}
+          <View style={styles.heroGradient} />
+        </MotiView>
+
+        {/* ── Service Cards 2×2 ── */}
+        <View style={styles.grid}>
+
+          {/* Card 1 — Cartes Cadeaux (bande images PSN/iTunes/Roblox) */}
+          <MotiView from={{ opacity: 0, translateY: 12 }} animate={{ opacity: 1, translateY: 0 }}
+            transition={{ type: "timing", duration: 350, delay: 100 }} style={styles.cardWrap}>
+            <TouchableOpacity style={styles.cardImg} activeOpacity={0.85}
+              onPress={() => router.push("/services/cartes-cadeaux")}>
+              <View style={styles.giftBand}>
+                <Image source={IMG_PSN} style={styles.giftBandImg} contentFit="contain" />
+                <Image source={IMG_ITU} style={styles.giftBandImg} contentFit="contain" />
+                <Image source={IMG_ROB} style={styles.giftBandImgSm} contentFit="contain" />
+              </View>
+              <View style={styles.cardImgBody}>
+                <Text style={styles.cardTitle}>{"CARTES CADEAUX\n(PSN, ITUNES, ROBLOX, ETC.)"}</Text>
+                <View style={styles.cardRow}>
+                  <Text style={styles.cardSub}>Achat et activation de vos cartes</Text>
+                  <Text style={styles.arrow}>›</Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+          </MotiView>
+
+          {/* Card 2 — UBA (logo + carte) */}
+          <MotiView from={{ opacity: 0, translateY: 12 }} animate={{ opacity: 1, translateY: 0 }}
+            transition={{ type: "timing", duration: 350, delay: 160 }} style={styles.cardWrap}>
+            <TouchableOpacity style={styles.cardImg} activeOpacity={0.85}
+              onPress={() => router.push("/services/uba")}>
+              <View style={styles.ubaBand}>
+                <Image source={IMG_UBA} style={styles.ubaLogo} contentFit="contain" />
+                <Image source={IMG_UBA_CARD} style={styles.ubaCard} contentFit="contain" />
+              </View>
+              <View style={styles.cardImgBody}>
+                <Text style={styles.cardTitle}>{"ACHAT ET RECHARGE\nUBA CAMEROUN"}</Text>
+                <View style={styles.cardRow}>
+                  <Text style={styles.cardSub}>Vos opérations UBA en un clic</Text>
+                  <Text style={styles.arrow}>›</Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+          </MotiView>
+
+          {/* Card 3 — Coupons (contenu-pack-transcash) */}
+          <MotiView from={{ opacity: 0, translateY: 12 }} animate={{ opacity: 1, translateY: 0 }}
+            transition={{ type: "timing", duration: 350, delay: 220 }} style={styles.cardWrap}>
+            <TouchableOpacity style={styles.cardImg} activeOpacity={0.85}
+              onPress={() => router.push("/services/coupons")}>
+              <Image source={IMG_TRANS} style={styles.imgTop} contentFit="cover" transition={300} />
+              <View style={styles.cardImgBody}>
+                <Text style={styles.cardTitle}>{"ÉCHANGE COUPONS\n(TRANSCASH, PCS)"}</Text>
+                <View style={styles.cardRow}>
+                  <Text style={styles.cardSub}>Convertissez vos coupons</Text>
+                  <Text style={styles.arrow}>›</Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+          </MotiView>
+
+          {/* Card 4 — Crypto/PayPal (image locale) */}
+          <MotiView from={{ opacity: 0, translateY: 12 }} animate={{ opacity: 1, translateY: 0 }}
+            transition={{ type: "timing", duration: 350, delay: 280 }} style={styles.cardWrap}>
+            <TouchableOpacity style={styles.cardImg} activeOpacity={0.85}
+              onPress={() => router.push("/services/crypto")}>
+              <Image source={IMG_CRYPTO} style={styles.imgTop} contentFit="cover" transition={300} />
+              <View style={styles.cardImgBody}>
+                <Text style={styles.cardTitle}>{"ÉCHANGE ET VENTE\nCRYPTO/PAYPAL"}</Text>
+                <View style={styles.cardRow}>
+                  <Text style={styles.cardSub}>Achat, vente, et conversion</Text>
+                  <Text style={styles.arrow}>›</Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+          </MotiView>
+
+        </View>
+
+        {/* ── CTA Section ── */}
+        <View style={styles.ctaSection}>
+          <Text style={styles.ctaTitle}>Bienvenue sur votre Empire mobile !</Text>
+          <Text style={styles.ctaSub}>
+            Cartes cadeaux · Crypto · Recharge UBA · Coupons{"\n"}Livraison en 15–30 min via WhatsApp
+          </Text>
+          <TouchableOpacity style={styles.ctaBtn} onPress={openWhatsApp} activeOpacity={0.85}>
+            <Text style={styles.ctaBtnTxt}>⚡ Commander maintenant</Text>
+          </TouchableOpacity>
+
+          {/* Réseaux sociaux */}
+          <View style={styles.socialRow}>
+            <TouchableOpacity style={styles.socialChip}
+              onPress={() => Linking.openURL(`https://wa.me/${CONTACT.whatsapp}`)}>
+              <Text style={styles.socialEmoji}>💬</Text>
+              <Text style={styles.socialLabel}>WhatsApp</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.socialChip}
+              onPress={() => Linking.openURL(CONTACT.telegram)}>
+              <Text style={styles.socialEmoji}>✈️</Text>
+              <Text style={styles.socialLabel}>Telegram</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.socialChip}
+              onPress={() => Linking.openURL("https://www.instagram.com/chreolempire")}>
+              <Text style={styles.socialEmoji}>📸</Text>
+              <Text style={styles.socialLabel}>Instagram</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.socialChip}
+              onPress={() => Linking.openURL("https://x.com/chreolempire")}>
+              <Text style={styles.socialEmoji}>𝕏</Text>
+              <Text style={styles.socialLabel}>X</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.socialChip}
+              onPress={() => Linking.openURL(`mailto:${CONTACT.email}`)}>
+              <Text style={styles.socialEmoji}>✉️</Text>
+              <Text style={styles.socialLabel}>Email</Text>
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity onPress={() => Linking.openURL("https://maps.google.com/?q=Chreol+Empire+Deido+Douala+Cameroun")}>
+            <Text style={styles.address}>📍 {CONTACT.address}</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Sticky search bar */}
-        <View style={styles.searchWrapper}>
-          <View style={styles.searchBar}>
-            <Text style={styles.searchIcon}>🔍</Text>
-            <TextInput
-              placeholder="Rechercher un produit..."
-              placeholderTextColor={colors.text.muted}
-              value={search}
-              onChangeText={setSearch}
-              style={styles.searchInput}
-            />
-            {search.length > 0 && (
-              <TouchableOpacity onPress={() => setSearch("")}>
-                <Text style={styles.clearSearch}>✕</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
-
-        {/* Hero Banner Carousel */}
-        {search.length === 0 && (
-          <View style={styles.heroSection}>
-            <ScrollView
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              onMomentumScrollEnd={(e) => {
-                setActiveBanner(Math.round(e.nativeEvent.contentOffset.x / (width - 48)));
-              }}
-              style={styles.heroBannerList}
-            >
-              {HERO_BANNERS.map((banner, i) => (
-                <MotiView
-                  key={banner.id}
-                  from={{ opacity: 0, scale: 0.96 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: i * 100 }}
-                  style={[styles.heroBanner, { width: width - 48 }]}
-                >
-                  <View style={[styles.heroBannerBg, { backgroundColor: banner.bg[0] }]} />
-                  <View style={[styles.heroBannerAccent, { backgroundColor: banner.bg[1] }]} />
-                  <View style={styles.heroBannerContent}>
-                    <Text style={styles.heroBannerEmoji}>{banner.emoji}</Text>
-                    <View style={styles.heroBannerText}>
-                      <Text style={styles.heroBannerTitle}>{banner.title}</Text>
-                      <Text style={styles.heroBannerSub}>{banner.subtitle}</Text>
-                    </View>
-                  </View>
-                  <View style={styles.heroBannerAction}>
-                    <Text style={styles.heroBannerActionText}>Voir →</Text>
-                  </View>
-                </MotiView>
-              ))}
-            </ScrollView>
-
-            {/* Dots */}
-            <View style={styles.bannerDots}>
-              {HERO_BANNERS.map((_, i) => (
-                <MotiView
-                  key={i}
-                  animate={{ width: i === activeBanner ? 20 : 6, opacity: i === activeBanner ? 1 : 0.4 }}
-                  transition={{ type: "timing", duration: 200 }}
-                  style={styles.bannerDot}
-                />
-              ))}
-            </View>
-          </View>
-        )}
-
-        {/* Category pills */}
-        <View style={styles.categoriesSection}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoriesList}>
-            {CATEGORIES.map((cat) => (
-              <TouchableOpacity
-                key={cat.id}
-                onPress={() => setActiveCategory(cat.id)}
-                style={[
-                  styles.categoryPill,
-                  activeCategory === cat.id && styles.categoryPillActive,
-                ]}
-              >
-                <Text style={styles.categoryEmoji}>{cat.emoji}</Text>
-                <Text
-                  style={[
-                    styles.categoryLabel,
-                    { color: activeCategory === cat.id ? "#fff" : colors.text.secondary },
-                  ]}
-                >
-                  {cat.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-
-        {/* Popular section */}
-        {search.length === 0 && activeCategory === "all" && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>⭐ Populaires</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.popularList}>
-              {popular.map((product, i) => (
-                <View key={product.id} style={styles.popularCardWrapper}>
-                  <ProductCard product={product} index={i} />
-                </View>
-              ))}
-            </ScrollView>
-          </View>
-        )}
-
-        {/* Full catalog */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            {search.length > 0
-              ? `${filtered.length} résultat${filtered.length > 1 ? "s" : ""} pour "${search}"`
-              : "📦 Tout le catalogue"}
-          </Text>
-
-          {filtered.length === 0 ? (
-            <MotiView
-              from={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              style={styles.emptyState}
-            >
-              <Text style={styles.emptyEmoji}>🔍</Text>
-              <Text style={styles.emptyText}>Aucun produit trouvé</Text>
-              <Text style={styles.emptySubText}>Essayez un autre terme ou catégorie</Text>
-            </MotiView>
-          ) : (
-            <View style={styles.catalogGrid}>
-              {filtered.map((product, i) => (
-                <View key={product.id} style={styles.catalogCell}>
-                  <ProductCard product={product} index={i} />
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
-
-        <View style={{ height: 24 }} />
       </ScrollView>
+
+      {/* ── FAB WhatsApp (logo WA en code) ── */}
+      <TouchableOpacity style={styles.fabWa} onPress={() => setContactOpen(true)} activeOpacity={0.85}>
+        <View style={styles.waLogoBubble}>
+          <Text style={styles.waLogoPhone}>☎</Text>
+        </View>
+      </TouchableOpacity>
+
+      {/* ── FAB Panier (invisible si vide) ── */}
+      {orders.length > 0 && (
+        <TouchableOpacity style={styles.fabCart} onPress={() => router.push("/(tabs)/orders")} activeOpacity={0.85}>
+          <Text style={styles.fabCartEmoji}>🛒</Text>
+          <View style={styles.fabCartBadge}>
+            <Text style={styles.fabCartBadgeTxt}>{orders.length}</Text>
+          </View>
+        </TouchableOpacity>
+      )}
+
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg.primary },
+
+  // ── Header ──
   header: {
-    flexDirection: "row", justifyContent: "space-between", alignItems: "center",
-    paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8,
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingHorizontal: 14, paddingVertical: 8,
+    backgroundColor: colors.bg.primary,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border.default,
   },
-  greeting: { fontSize: 22, fontWeight: "800", color: colors.text.primary, letterSpacing: -0.4 },
-  subGreeting: { fontSize: 13, color: colors.text.secondary, marginTop: 2 },
-  avatar: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: colors.brand.blue,
+  headerLeft: { flexDirection: "row", alignItems: "center", gap: 10, flex: 1 },
+  logoRing: {
+    width: 42, height: 42, borderRadius: 21,
+    borderWidth: 2, borderColor: colors.brand.gold,
+    overflow: "hidden",
+    shadowColor: colors.brand.gold,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6, shadowRadius: 8, elevation: 6,
+  },
+  logo: { width: 42, height: 42 },
+  headerTitle: { fontSize: 16, fontWeight: "800", color: colors.text.primary, letterSpacing: -0.3 },
+  headerSlogan: { fontSize: 9, color: colors.brand.gold, fontWeight: "600", marginTop: 1, letterSpacing: 0.1 },
+
+  headerActions: { flexDirection: "row", alignItems: "center", gap: 8 },
+  waBtn: {
+    width: 38, height: 38, borderRadius: 19,
+    backgroundColor: "#25D366",
+    alignItems: "center", justifyContent: "center",
+    shadowColor: "#25D366", shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4, shadowRadius: 6, elevation: 4,
+  },
+  waBtnText: { fontSize: 18 },
+  cartBtn: { padding: 4, position: "relative" },
+  cartEmoji: { fontSize: 24 },
+  cartBadge: {
+    position: "absolute", top: 0, right: 0,
+    backgroundColor: "#E50914", borderRadius: 9,
+    minWidth: 17, height: 17,
+    alignItems: "center", justifyContent: "center", paddingHorizontal: 3,
+  },
+  cartBadgeText: { color: "#fff", fontSize: 9, fontWeight: "800" },
+
+  // ── Modal Contact ──
+  modalBackdrop: {
+    position: "absolute", top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.6)",
+  },
+  modalWrap: { flex: 1, justifyContent: "flex-end" },
+  modalSheet: {
+    backgroundColor: colors.bg.card,
+    borderTopLeftRadius: 28, borderTopRightRadius: 28,
+    padding: 24, paddingBottom: 40,
+    borderTopWidth: 1, borderColor: colors.border.default,
+  },
+  modalHandle: {
+    width: 40, height: 4, borderRadius: 2,
+    backgroundColor: colors.border.strong,
+    alignSelf: "center", marginBottom: 20,
+  },
+  modalHeader: { marginBottom: 20 },
+  modalTitle: { fontSize: 18, fontWeight: "800", color: colors.text.primary },
+  modalSub: { fontSize: 13, color: colors.text.secondary, marginTop: 4 },
+  inputLabel: { fontSize: 12, fontWeight: "700", color: colors.brand.gold, marginBottom: 6, marginTop: 12 },
+  input: {
+    backgroundColor: colors.bg.elevated,
+    borderRadius: radius.md, padding: 14,
+    borderWidth: 1, borderColor: colors.border.default,
+    color: colors.text.primary, fontSize: 14,
+  },
+  inputMulti: { minHeight: 100, paddingTop: 12 },
+  sendBtn: {
+    marginTop: 20,
+    backgroundColor: "#25D366", borderRadius: radius.full,
+    paddingVertical: 15, alignItems: "center",
+    shadowColor: "#25D366", shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.4, shadowRadius: 10, elevation: 6,
+  },
+  sendBtnDisabled: { opacity: 0.45 },
+  sendBtnText: { color: "#fff", fontSize: 15, fontWeight: "800" },
+
+  // ── Hero ──
+  hero: {
+    height: 210, marginHorizontal: 16, marginTop: 14,
+    borderRadius: radius.xl, overflow: "hidden",
+    backgroundColor: colors.bg.elevated,
+  },
+  heroGradient: {
+    position: "absolute", bottom: 0, left: 0, right: 0, height: 60,
+    backgroundColor: "rgba(0,0,0,0.25)",
+  },
+
+  // ── Grid ──
+  grid: { flexDirection: "row", flexWrap: "wrap", paddingHorizontal: 16, paddingTop: 14, gap: 12 },
+  cardWrap: { width: CARD_W },
+
+  cardImg: {
+    backgroundColor: colors.bg.card, borderRadius: radius.lg,
+    borderWidth: 1, borderColor: colors.border.default,
+    overflow: "hidden",
+    shadowColor: colors.brand.gold, shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08, shadowRadius: 8, elevation: 3,
+  },
+  imgTop: { width: "100%", height: 82 },
+  cardImgBody: { padding: 10 },
+  cardTitle: { fontSize: 11, fontWeight: "800", color: colors.text.primary, lineHeight: 15, letterSpacing: 0.1 },
+  cardRow: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", marginTop: 8 },
+  cardSub: { fontSize: 10, color: colors.text.secondary, flex: 1, lineHeight: 13 },
+  arrow: { fontSize: 20, color: colors.brand.gold, fontWeight: "700", marginLeft: 4 },
+
+  // Card 1 — bande PSN/iTunes/Roblox
+  giftBand: {
+    height: 82, backgroundColor: colors.bg.elevated,
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingHorizontal: 8,
+  },
+  giftBandImg: { width: 58, height: 68, borderRadius: 6 },
+  giftBandImgSm: { width: 38, height: 38, borderRadius: 10 },
+
+  // Card 2 — UBA logo + carte
+  ubaBand: {
+    height: 82, backgroundColor: colors.bg.elevated,
+    flexDirection: "row", alignItems: "center", justifyContent: "space-around", paddingHorizontal: 10,
+  },
+  ubaLogo: { width: 60, height: 50 },
+  ubaCard: { width: 72, height: 52, borderRadius: 6 },
+
+  // ── CTA Section ──
+  ctaSection: {
+    marginHorizontal: 16, marginTop: 20,
+    backgroundColor: colors.bg.card,
+    borderRadius: 20, padding: 20,
+    borderWidth: 1, borderColor: colors.border.default,
+    alignItems: "center", gap: 12,
+  },
+  ctaTitle: {
+    fontSize: 18, fontWeight: "900", color: colors.text.primary,
+    textAlign: "center", letterSpacing: -0.3,
+  },
+  ctaSub: {
+    fontSize: 13, color: colors.text.secondary,
+    textAlign: "center", lineHeight: 19,
+  },
+  ctaBtn: {
+    backgroundColor: colors.brand.gold,
+    borderRadius: radius.full, paddingVertical: 13, paddingHorizontal: 32,
+    shadowColor: colors.brand.gold, shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4, shadowRadius: 10, elevation: 6,
+  },
+  ctaBtnTxt: { color: "#0A0A0A", fontSize: 15, fontWeight: "900", letterSpacing: 0.2 },
+
+  // Réseaux sociaux
+  socialRow: { flexDirection: "row", gap: 10, flexWrap: "wrap", justifyContent: "center", marginTop: 4 },
+  socialChip: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    backgroundColor: colors.bg.elevated,
+    borderRadius: radius.full, paddingHorizontal: 12, paddingVertical: 7,
+    borderWidth: 1, borderColor: colors.border.default,
+  },
+  socialEmoji: { fontSize: 14 },
+  socialLabel: { fontSize: 12, color: colors.text.secondary, fontWeight: "600" },
+
+  address: { fontSize: 11, color: colors.brand.gold, textAlign: "center", marginTop: 4, textDecorationLine: "underline" },
+
+  // ── FABs ──
+  fabWa: {
+    position: "absolute", bottom: 84, right: 20,
+    width: 62, height: 62, borderRadius: 31,
+    backgroundColor: "#25D366",
+    alignItems: "center", justifyContent: "center",
+    elevation: 10,
+    shadowColor: "#25D366", shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5, shadowRadius: 14,
+  },
+  waLogoBubble: {
+    width: 38, height: 38, borderRadius: 19,
+    borderWidth: 2.5, borderColor: "#fff",
     alignItems: "center", justifyContent: "center",
   },
-  avatarText: { color: "#fff", fontSize: 16, fontWeight: "700" },
-  searchWrapper: {
-    backgroundColor: colors.bg.primary,
-    paddingHorizontal: 20, paddingVertical: 10,
-    borderBottomWidth: 1, borderBottomColor: colors.border.default,
+  waLogoPhone: { fontSize: 20, color: "#fff" },
+
+  fabCart: {
+    position: "absolute", bottom: 154, right: 20,
+    width: 52, height: 52, borderRadius: 26,
+    backgroundColor: "#2563EB",
+    alignItems: "center", justifyContent: "center",
+    elevation: 8,
+    shadowColor: "#2563EB", shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35, shadowRadius: 12,
   },
-  searchBar: {
-    flexDirection: "row", alignItems: "center",
-    backgroundColor: colors.bg.card,
-    borderRadius: radius.xl,
-    paddingHorizontal: 14, height: 44,
-    borderWidth: 1, borderColor: colors.border.default,
-    gap: 8,
+  fabCartEmoji: { fontSize: 24 },
+  fabCartBadge: {
+    position: "absolute", top: 2, right: 2,
+    backgroundColor: "#EF4444", borderRadius: 9,
+    minWidth: 18, height: 18,
+    alignItems: "center", justifyContent: "center", paddingHorizontal: 3,
+    borderWidth: 1.5, borderColor: colors.bg.primary,
   },
-  searchIcon: { fontSize: 16 },
-  searchInput: { flex: 1, color: colors.text.primary, fontSize: 15 },
-  clearSearch: { color: colors.text.muted, fontSize: 16, paddingHorizontal: 4 },
-  heroSection: { paddingTop: 16, paddingHorizontal: 24 },
-  heroBannerList: { marginBottom: 10 },
-  heroBanner: {
-    borderRadius: radius["2xl"],
-    overflow: "hidden",
-    height: 130,
-    marginRight: 12,
-    justifyContent: "space-between",
-    padding: 18,
-  },
-  heroBannerBg: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: 0.9,
-  },
-  heroBannerAccent: {
-    position: "absolute", right: -30, top: -30,
-    width: 140, height: 140,
-    borderRadius: 70,
-    opacity: 0.5,
-  },
-  heroBannerContent: { flexDirection: "row", alignItems: "center", gap: 12 },
-  heroBannerEmoji: { fontSize: 36 },
-  heroBannerText: { flex: 1 },
-  heroBannerTitle: { fontSize: 17, fontWeight: "800", color: "#fff", letterSpacing: -0.3 },
-  heroBannerSub: { fontSize: 12, color: "rgba(255,255,255,0.75)", marginTop: 3 },
-  heroBannerAction: {
-    alignSelf: "flex-end",
-    backgroundColor: "rgba(255,255,255,0.2)",
-    paddingHorizontal: 12, paddingVertical: 5,
-    borderRadius: radius.full,
-  },
-  heroBannerActionText: { color: "#fff", fontSize: 13, fontWeight: "700" },
-  bannerDots: { flexDirection: "row", gap: 5, justifyContent: "center", marginBottom: 8 },
-  bannerDot: { height: 6, borderRadius: 3, backgroundColor: colors.brand.blue },
-  categoriesSection: { paddingVertical: 8 },
-  categoriesList: { paddingHorizontal: 20, gap: 8 },
-  categoryPill: {
-    flexDirection: "row", alignItems: "center", gap: 6,
-    backgroundColor: colors.bg.card,
-    borderRadius: radius.full,
-    paddingHorizontal: 14, paddingVertical: 8,
-    borderWidth: 1, borderColor: colors.border.default,
-  },
-  categoryPillActive: {
-    backgroundColor: colors.brand.blue,
-    borderColor: colors.brand.blue,
-  },
-  categoryEmoji: { fontSize: 16 },
-  categoryLabel: { fontSize: 13, fontWeight: "600" },
-  section: { paddingHorizontal: 20, paddingTop: 16 },
-  sectionTitle: {
-    fontSize: 16, fontWeight: "700", color: colors.text.primary,
-    marginBottom: 12, letterSpacing: -0.2,
-  },
-  popularList: { gap: 12 },
-  popularCardWrapper: { width: 180 },
-  catalogGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
-  catalogCell: { width: "47%" },
-  emptyState: { alignItems: "center", paddingVertical: 48 },
-  emptyEmoji: { fontSize: 48, marginBottom: 12 },
-  emptyText: { fontSize: 16, fontWeight: "700", color: colors.text.primary },
-  emptySubText: { fontSize: 13, color: colors.text.secondary, marginTop: 6 },
+  fabCartBadgeTxt: { color: "#fff", fontSize: 9, fontWeight: "800" },
 });

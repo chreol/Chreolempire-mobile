@@ -3,25 +3,14 @@ import { useEffect } from "react";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
 
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({
-    "Inter-Regular": require("@expo-google-fonts/inter/Inter_400Regular.ttf"),
-    "Inter-Medium": require("@expo-google-fonts/inter/Inter_500Medium.ttf"),
-    "Inter-SemiBold": require("@expo-google-fonts/inter/Inter_600SemiBold.ttf"),
-    "Inter-Bold": require("@expo-google-fonts/inter/Inter_700Bold.ttf"),
-    "Inter-ExtraBold": require("@expo-google-fonts/inter/Inter_800ExtraBold.ttf"),
-  });
-
   useEffect(() => {
-    if (fontsLoaded) SplashScreen.hideAsync();
-  }, [fontsLoaded]);
-
-  if (!fontsLoaded) return null;
+    SplashScreen.hideAsync();
+  }, []);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -35,6 +24,11 @@ export default function RootLayout() {
           name="product/[id]"
           options={{ animation: "slide_from_bottom", presentation: "modal" }}
         />
+        <Stack.Screen name="services/cartes-cadeaux" options={{ animation: "slide_from_right" }} />
+        <Stack.Screen name="services/uba" options={{ animation: "slide_from_right" }} />
+        <Stack.Screen name="services/coupons" options={{ animation: "slide_from_right" }} />
+        <Stack.Screen name="services/crypto" options={{ animation: "slide_from_right" }} />
+        <Stack.Screen name="services/paypal" options={{ animation: "slide_from_right" }} />
       </Stack>
     </GestureHandlerRootView>
   );

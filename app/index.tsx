@@ -1,10 +1,12 @@
 import { useEffect } from "react";
-import { View } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
-import Animated, { useSharedValue, useAnimatedStyle, withTiming, withDelay, runOnJS } from "react-native-reanimated";
-import { MotiView, MotiText } from "moti";
+import { Image } from "expo-image";
+import { MotiView } from "moti";
 import { useAuth } from "@/hooks/useAuth";
 import { colors } from "@/constants/theme";
+
+const LOGO = require("../assets/Fond vide logo chreol empire.png");
 
 export default function SplashIndex() {
   const router = useRouter();
@@ -12,113 +14,86 @@ export default function SplashIndex() {
 
   useEffect(() => {
     if (!loading) {
-      const timeout = setTimeout(() => {
-        if (user) {
-          router.replace("/(tabs)");
-        } else {
-          router.replace("/onboarding");
-        }
-      }, 2200);
-      return () => clearTimeout(timeout);
+      const t = setTimeout(() => {
+        router.replace(user ? "/(tabs)" : "/onboarding");
+      }, 2600);
+      return () => clearTimeout(t);
     }
   }, [loading, user]);
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.bg.primary, alignItems: "center", justifyContent: "center" }}>
-      {/* Glow background */}
+    <View style={styles.container}>
+      {/* Gold glow */}
       <MotiView
-        from={{ opacity: 0, scale: 0.5 }}
-        animate={{ opacity: 0.25, scale: 2 }}
-        transition={{ type: "timing", duration: 1500 }}
-        style={{
-          position: "absolute",
-          width: 300,
-          height: 300,
-          borderRadius: 150,
-          backgroundColor: colors.brand.blue,
-        }}
+        from={{ opacity: 0, scale: 0.4 }}
+        animate={{ opacity: 0.18, scale: 2.5 }}
+        transition={{ type: "timing", duration: 1800 }}
+        style={styles.glow}
       />
 
       {/* Logo */}
       <MotiView
         from={{ opacity: 0, scale: 0.6 }}
         animate={{ opacity: 1, scale: 1 }}
-        transition={{ type: "spring", delay: 200, damping: 15 }}
-        style={{
-          width: 96,
-          height: 96,
-          borderRadius: 28,
-          backgroundColor: colors.brand.blue,
-          alignItems: "center",
-          justifyContent: "center",
-          marginBottom: 20,
-          shadowColor: colors.brand.blue,
-          shadowOffset: { width: 0, height: 0 },
-          shadowOpacity: 0.8,
-          shadowRadius: 24,
-          elevation: 20,
-        }}
+        transition={{ type: "spring", delay: 200, damping: 14 }}
+        style={styles.logoWrap}
       >
-        <MotiText
-          style={{ fontSize: 42, fontWeight: "900", color: "#fff" }}
-          from={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 500 }}
-        >
-          CE
-        </MotiText>
+        <Image source={LOGO} style={styles.logo} contentFit="contain" />
       </MotiView>
 
-      {/* Title */}
+      {/* Name */}
       <MotiView
         from={{ opacity: 0, translateY: 20 }}
         animate={{ opacity: 1, translateY: 0 }}
-        transition={{ type: "timing", duration: 600, delay: 600 }}
+        transition={{ type: "timing", duration: 500, delay: 600 }}
+        style={styles.nameWrap}
       >
-        <MotiText
-          style={{
-            fontSize: 26,
-            fontWeight: "800",
-            color: colors.text.primary,
-            textAlign: "center",
-            letterSpacing: -0.5,
-          }}
-        >
-          Chreol Empire
-        </MotiText>
-        <MotiText
-          style={{
-            fontSize: 14,
-            color: colors.text.secondary,
-            textAlign: "center",
-            marginTop: 6,
-            letterSpacing: 0.5,
-          }}
-          from={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 900 }}
-        >
-          Premium Digital Store 🇨🇲
-        </MotiText>
+        <Text style={styles.name}>Chreol Empire</Text>
+        <Text style={styles.tagline}>Le Premium des Services Digitaux 🇨🇲</Text>
       </MotiView>
 
-      {/* Loading dots */}
+      {/* Dots */}
       <MotiView
         from={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 1200 }}
-        style={{ flexDirection: "row", gap: 8, marginTop: 48 }}
+        style={styles.dots}
       >
         {[0, 1, 2].map((i) => (
           <MotiView
             key={i}
-            from={{ scale: 0.5, opacity: 0.3 }}
-            animate={{ scale: [0.5, 1, 0.5], opacity: [0.3, 1, 0.3] }}
-            transition={{ type: "timing", duration: 900, delay: i * 200, loop: true }}
-            style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: colors.brand.blue }}
+            from={{ scale: 0.4, opacity: 0.2 }}
+            animate={{ scale: [0.4, 1, 0.4], opacity: [0.2, 1, 0.2] }}
+            transition={{ type: "timing", duration: 900, delay: i * 220, loop: true }}
+            style={styles.dot}
           />
         ))}
       </MotiView>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1, backgroundColor: colors.bg.primary,
+    alignItems: "center", justifyContent: "center", gap: 24,
+  },
+  glow: {
+    position: "absolute",
+    width: 300, height: 300, borderRadius: 150,
+    backgroundColor: colors.brand.gold,
+  },
+  logoWrap: {
+    width: 140, height: 140, borderRadius: 70,
+    overflow: "hidden",
+    shadowColor: colors.brand.gold,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.5, shadowRadius: 32, elevation: 20,
+  },
+  logo: { width: 140, height: 140 },
+  nameWrap: { alignItems: "center", gap: 8 },
+  name: { fontSize: 28, fontWeight: "900", color: colors.text.primary, letterSpacing: -0.5 },
+  tagline: { fontSize: 14, color: colors.text.secondary, letterSpacing: 0.3 },
+  dots: { flexDirection: "row", gap: 8, marginTop: 16 },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.brand.gold },
+});

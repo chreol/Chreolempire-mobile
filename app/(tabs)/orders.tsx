@@ -9,7 +9,6 @@ import * as Haptics from "expo-haptics";
 import { MotiView } from "moti";
 import { useAuth } from "@/hooks/useAuth";
 import { useOrders } from "@/hooks/useOrders";
-import SkeletonCard from "@/components/SkeletonCard";
 import { colors, radius } from "@/constants/theme";
 import type { Order, OrderStatus } from "@/lib/types";
 
@@ -202,7 +201,9 @@ export default function OrdersScreen() {
 
       {loading ? (
         <View style={styles.skeletons}>
-          {[1, 2, 3].map((i) => <SkeletonCard key={i} />)}
+          {[1, 2, 3].map((i) => (
+            <View key={i} style={{ height: 80, backgroundColor: colors.border.default, borderRadius: 16, opacity: 0.5 }} />
+          ))}
         </View>
       ) : orders.length === 0 ? (
         <MotiView
@@ -309,7 +310,7 @@ const codeStyles = StyleSheet.create({
     letterSpacing: 2,
   },
   copyButton: {
-    backgroundColor: colors.brand.blue,
+    backgroundColor: colors.brand.gold,
     borderRadius: radius.full, paddingVertical: 13,
     alignItems: "center",
   },

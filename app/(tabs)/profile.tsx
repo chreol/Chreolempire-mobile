@@ -1,18 +1,20 @@
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Image } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Linking } from "react-native";
+import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { signOut } from "firebase/auth";
 import * as Haptics from "expo-haptics";
 import { MotiView } from "moti";
-import { auth } from "@/lib/firebase";
 import { useAuth } from "@/hooks/useAuth";
 import { useOrders } from "@/hooks/useOrders";
 import { colors, radius } from "@/constants/theme";
+import { CONTACT } from "@/constants/services";
+
+const DEMO_MODE = process.env.EXPO_PUBLIC_DEMO_MODE === "true";
 
 const menuItems = [
-  { id: "support", emoji: "💬", label: "Support WhatsApp", subtitle: "Répond en moins de 5 min", color: "#25D366" },
-  { id: "faq", emoji: "❓", label: "FAQ & Aide", subtitle: "Questions fréquentes", color: colors.brand.blue },
-  { id: "terms", emoji: "📄", label: "Conditions d'utilisation", subtitle: "CGU et politique de confidentialité", color: colors.text.muted },
+  { id: "support", emoji: "💬", label: "Support WhatsApp", subtitle: "Répond en moins de 5 min", color: "#25D366", action: "whatsapp" },
+  { id: "telegram", emoji: "✈️", label: "Telegram Bot", subtitle: "Commandes automatisées", color: "#0088CC", action: "telegram" },
+  { id: "terms", emoji: "📄", label: "Conditions d'utilisation", subtitle: "CGU et politique de confidentialité", color: colors.text.muted, action: null },
 ];
 
 export default function ProfileScreen() {
@@ -26,22 +28,27 @@ export default function ProfileScreen() {
     .reduce((acc, o) => acc + o.amount_fcfa, 0);
 
   const handleSignOut = async () => {
-    Alert.alert(
-      "Déconnexion",
-      "Êtes-vous sûr de vouloir vous déconnecter ?",
-      [
-        { text: "Annuler", style: "cancel" },
-        {
-          text: "Déconnexion",
-          style: "destructive",
-          onPress: async () => {
-            await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Alert.alert("Déconnexion", "Êtes-vous sûr de vouloir vous déconnecter ?", [
+      { text: "Annuler", style: "cancel" },
+      {
+        text: "Déconnexion", style: "destructive",
+        onPress: async () => {
+          await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          if (!DEMO_MODE) {
+            const { signOut } = await import("firebase/auth");
+            const { auth } = await import("@/lib/firebase");
             await signOut(auth);
-            router.replace("/auth");
-          },
+          }
+          router.replace("/auth");
         },
-      ]
-    );
+      },
+    ]);
+  };
+
+  const handleMenuPress = (action: string | null) => {
+    if (action === "whatsapp") Linking.openURL(`https://wa.me/${CONTACT.whatsapp}`);
+    else if (action === "telegram") Linking.openURL(CONTACT.telegram);
+    else Haptics.selectionAsync();
   };
 
   return (
@@ -59,7 +66,7 @@ export default function ProfileScreen() {
       >
         <View style={styles.avatarSection}>
           {user?.photoURL ? (
-            <Image source={{ uri: user.photoURL }} style={styles.avatar} />
+            <Image source={{ uri: user.photoURL }} style={styles.avatar} contentFit="cover" />
           ) : (
             <View style={styles.avatarFallback}>
               <Text style={styles.avatarLetter}>
@@ -109,7 +116,7 @@ export default function ProfileScreen() {
             <TouchableOpacity
               style={styles.menuItem}
               activeOpacity={0.8}
-              onPress={() => Haptics.selectionAsync()}
+              onPress={() => handleMenuPress(item.action)}
             >
               <View style={[styles.menuIcon, { backgroundColor: item.color + "22" }]}>
                 <Text style={styles.menuEmoji}>{item.emoji}</Text>
@@ -151,7 +158,7 @@ const styles = StyleSheet.create({
   avatar: { width: 64, height: 64, borderRadius: 32 },
   avatarFallback: {
     width: 64, height: 64, borderRadius: 32,
-    backgroundColor: colors.brand.blue,
+    backgroundColor: colors.brand.gold,
     alignItems: "center", justifyContent: "center",
   },
   avatarLetter: { fontSize: 26, fontWeight: "800", color: "#fff" },
