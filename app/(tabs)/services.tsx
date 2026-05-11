@@ -46,12 +46,30 @@ const OTHER_SERVICES = [
   },
   {
     id: "crypto",
-    title: "Crypto & PayPal",
-    sub: "USDT · BTC · TRX · PayPal",
+    title: "Crypto & Échange MoMo",
+    sub: "USDT · BTC · TRX · 0% commission",
     icon: "₿",
     color: "#26A17B",
     img: IMG_CRYPTO,
     route: "/services/crypto",
+  },
+  {
+    id: "paypal",
+    title: "PayPal Europe",
+    sub: "Achat & vente de solde PayPal",
+    icon: "🔵",
+    color: "#003087",
+    img: IMG_GOOGLE,
+    route: "/services/paypal",
+  },
+  {
+    id: "factures",
+    title: "Paiement Factures",
+    sub: "Canal+ · Eneo · Camwater · StarTimes",
+    icon: "🧾",
+    color: "#FF6B00",
+    img: IMG_UBA,
+    route: "/services/factures",
   },
 ];
 

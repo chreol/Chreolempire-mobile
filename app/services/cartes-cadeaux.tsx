@@ -239,16 +239,6 @@ export default function CartesCadeauxScreen() {
                 <Text style={styles.customNote}>Taux : 1€ = {CUSTOM_RATE} FCFA</Text>
               </View>
 
-              {/* Price table */}
-              <View style={styles.priceTable}>
-                <Text style={styles.priceTableTitle}>Tableau des prix — {card.name}</Text>
-                {card.amounts.map((a, i) => (
-                  <View key={i} style={[styles.priceRow, i % 2 === 0 && styles.priceRowAlt]}>
-                    <Text style={styles.priceRowLabel}>{a.label}</Text>
-                    <Text style={styles.priceRowPrice}>{a.price.toLocaleString("fr-FR")} FCFA</Text>
-                  </View>
-                ))}
-              </View>
             </MotiView>
           )}
 
@@ -418,28 +408,6 @@ const styles = StyleSheet.create({
   },
   customResultText: { fontSize: 13, fontWeight: "800" },
   customNote: { fontSize: 11, color: colors.text.muted, marginTop: 6 },
-
-  // Price table
-  priceTable: {
-    backgroundColor: colors.bg.card,
-    borderRadius: radius.xl,
-    overflow: "hidden",
-    borderWidth: 1, borderColor: colors.border.default,
-    marginBottom: 16,
-  },
-  priceTableTitle: {
-    fontSize: 12, fontWeight: "800", color: colors.text.primary,
-    padding: 12,
-    borderBottomWidth: 1, borderBottomColor: colors.border.default,
-    backgroundColor: colors.bg.elevated,
-  },
-  priceRow: {
-    flexDirection: "row", justifyContent: "space-between", alignItems: "center",
-    paddingHorizontal: 14, paddingVertical: 9,
-  },
-  priceRowAlt: { backgroundColor: colors.bg.secondary + "88" },
-  priceRowLabel: { fontSize: 13, color: colors.text.secondary, fontWeight: "600" },
-  priceRowPrice: { fontSize: 13, color: colors.brand.gold, fontWeight: "700" },
 
   // Info box
   infoBox: {

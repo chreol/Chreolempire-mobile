@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  Linking, Alert, Clipboard,
+  Linking, Alert, Clipboard, TextInput, KeyboardAvoidingView, Platform,
 } from "react-native";
 import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -191,6 +191,7 @@ export default function CartScreen() {
   const router = useRouter();
   const { items, updateQty, removeItem, clearCart, total, count } = useCart();
   const [payment, setPayment] = useState<PaymentId>("mtn");
+  const [deliveryEmail, setDeliveryEmail] = useState("");
 
   const selectedMethod = PAYMENT_METHODS.find(m => m.id === payment)!;
   const isMobileMoney = payment === "mtn" || payment === "orange";
@@ -215,11 +216,15 @@ export default function CartScreen() {
       paymentLine += ` — sur demande`;
     }
 
+    const emailLine = deliveryEmail.trim()
+      ? `\n📧 *Livraison par email :* ${deliveryEmail.trim()}`
+      : "";
+
     return (
       `Bonjour Chreol Empire 👋\n\n` +
       `📦 *COMMANDE*\n${lines}\n\n` +
       `💰 *Total : ${total.toLocaleString("fr-FR")} FCFA*\n\n` +
-      `💳 *Mode de paiement :*\n${paymentLine}\n\n` +
+      `💳 *Mode de paiement :*\n${paymentLine}${emailLine}\n\n` +
       `⚠️ *Je vais vous envoyer ici la capture d'écran (screenshot) de ma preuve de paiement pour déclencher l'envoi immédiat.*`
     );
   };
@@ -262,6 +267,7 @@ export default function CartScreen() {
   }
 
   return (
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
     <SafeAreaView style={styles.container} edges={["top"]}>
       {/* Header */}
       <View style={styles.header}>
@@ -325,6 +331,27 @@ export default function CartScreen() {
           <PaymentInstructions id={payment} total={total} />
         </MotiView>
 
+        {/* Email delivery */}
+        <View style={styles.emailSection}>
+          <Text style={styles.sectionLabel}>Livraison par email (optionnel)</Text>
+          <View style={styles.emailRow}>
+            <Text style={styles.emailIcon}>📧</Text>
+            <TextInput
+              style={styles.emailInput}
+              value={deliveryEmail}
+              onChangeText={setDeliveryEmail}
+              placeholder="votre@email.com"
+              placeholderTextColor={colors.text.muted}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              returnKeyType="done"
+            />
+          </View>
+          <Text style={styles.emailNote}>
+            Renseignez votre adresse email si vous souhaitez recevoir vos codes par email (en plus de WhatsApp)
+          </Text>
+        </View>
+
         {/* Screenshot proof reminder */}
         <View style={styles.proofBox}>
           <Text style={styles.proofTitle}>📸 Preuve de paiement obligatoire</Text>
@@ -357,6 +384,7 @@ export default function CartScreen() {
         </TouchableOpacity>
       </View>
     </SafeAreaView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -496,6 +524,27 @@ const styles = StyleSheet.create({
   },
   proofTitle: { fontSize: 13, fontWeight: "800", color: "#25D366", marginBottom: 8 },
   proofText: { fontSize: 12, color: "#7DCF9F", lineHeight: 19 },
+
+  // Email delivery
+  emailSection: {},
+  emailRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.bg.card,
+    borderRadius: radius.lg,
+    borderWidth: 1.5, borderColor: colors.border.default,
+    paddingHorizontal: 14,
+    gap: 10,
+    marginBottom: 6,
+  },
+  emailIcon: { fontSize: 18 },
+  emailInput: {
+    flex: 1,
+    fontSize: 14,
+    color: colors.text.primary,
+    paddingVertical: 13,
+  },
+  emailNote: { fontSize: 11, color: colors.text.muted, lineHeight: 16 },
 
   // Warning
   warningBox: {
