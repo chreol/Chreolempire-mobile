@@ -12,8 +12,6 @@ import { colors, radius } from "@/constants/theme";
 import RateTicker from "@/components/RateTicker";
 import PromoBanner from "@/components/PromoBanner";
 import { CONTACT } from "@/constants/services";
-import { useAuth } from "@/hooks/useAuth";
-import { useOrders } from "@/hooks/useOrders";
 
 const { width } = Dimensions.get("window");
 const CARD_W = (width - 44) / 2;
@@ -36,8 +34,6 @@ const IC_EMAIL     = require("../../assets/email.jpg");
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { user } = useAuth();
-  const { orders } = useOrders(user?.uid);
 
   const [contactOpen, setContactOpen] = useState(false);
   const [pseudo, setPseudo] = useState("");
