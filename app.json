@@ -95,16 +95,7 @@
     "scheme": "chreolempire",
     "plugins": [
       "expo-router",
-      "expo-font",
-      [
-        "expo-build-properties",
-        {
-          "android": {
-            "enableMinifyInReleaseBuilds": true,
-            "enableShrinkResourcesInReleaseBuilds": true
-          }
-        }
-      ]
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true
