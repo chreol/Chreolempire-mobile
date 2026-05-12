@@ -150,10 +150,17 @@ export const GIFT_CARDS = [
     tier: "robux" as const,
     amounts: [
       { label: "100 Robux",  price: 2500 },
-      { label: "400 Robux",  price: 6500 },
-      { label: "800 Robux",  price: 12000 },
-      { label: "1000 Robux", price: 14000 },
-      { label: "2000 Robux", price: 23500 },
+      { label: "200 Robux",  price: 3500 },
+      { label: "300 Robux",  price: 4500 },
+      { label: "400 Robux",  price: 5500 },
+      { label: "500 Robux",  price: 6750 },
+      { label: "800 Robux",  price: 10500 },
+      { label: "1000 Robux", price: 12500 },
+      { label: "2000 Robux", price: 23000 },
+      { label: "4000 Robux", price: 45500 },
+      { label: "8000 Robux", price: 87000 },
+      { label: "10000 Robux",price: 108750 },
+      { label: "20000 Robux",price: 217500 },
     ],
   },
 ];
@@ -239,8 +246,11 @@ export const CRYPTO_RATES = [
   },
 ];
 
+// ⚠️  TAUX VARIABLE — À METTRE À JOUR RÉGULIÈREMENT
+// Modifiez uniquement les valeurs `rate` ci-dessous (en FCFA par €).
+// La commission PCS (7%) et la formule se calculent automatiquement.
 export const COUPON_RATES = {
-  pcs: { rate: 440, commission: 7, formula: "(montant − 7%) × 440" },
+  pcs:       { rate: 440, commission: 7, formula: "(montant − 7%) × 440" },
   transcash: { rate: 440, commission: 0, formula: "montant × 440" },
 };
 

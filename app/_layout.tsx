@@ -5,6 +5,12 @@ import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import * as SplashScreen from "expo-splash-screen";
 import { CartProvider } from "@/contexts/CartContext";
+import { HistoryProvider } from "@/contexts/HistoryContext";
+import { LoyaltyProvider } from "@/contexts/LoyaltyContext";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
+import FloatingWaBot from "@/components/FloatingWaBot";
+
+function NotificationsInit() { usePushNotifications(); return null; }
 
 SplashScreen.preventAutoHideAsync();
 
@@ -15,7 +21,10 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
+      <LoyaltyProvider>
+      <HistoryProvider>
       <CartProvider>
+        <NotificationsInit />
         <StatusBar style="light" backgroundColor="#0A0B0F" />
         <Stack screenOptions={{ headerShown: false, animation: "fade" }}>
           <Stack.Screen name="index" />
@@ -34,7 +43,10 @@ export default function RootLayout() {
           <Stack.Screen name="services/paypal" options={{ animation: "slide_from_right" }} />
           <Stack.Screen name="services/factures" options={{ animation: "slide_from_right" }} />
         </Stack>
+        <FloatingWaBot />
       </CartProvider>
+      </HistoryProvider>
+      </LoyaltyProvider>
     </GestureHandlerRootView>
   );
 }

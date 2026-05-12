@@ -9,6 +9,8 @@ import { useRouter } from "expo-router";
 import { MotiView } from "moti";
 import { useState } from "react";
 import { colors, radius } from "@/constants/theme";
+import RateTicker from "@/components/RateTicker";
+import PromoBanner from "@/components/PromoBanner";
 import { CONTACT } from "@/constants/services";
 import { useAuth } from "@/hooks/useAuth";
 import { useOrders } from "@/hooks/useOrders";
@@ -16,15 +18,21 @@ import { useOrders } from "@/hooks/useOrders";
 const { width } = Dimensions.get("window");
 const CARD_W = (width - 44) / 2;
 
-const LOGO       = require("../../assets/Fond vide logo chreol empire.png");
-const STORE_BG   = require("../../assets/Photo de la boutique bureau de change pcs mastercard et Transcash.png");
-const IMG_PSN    = require("../../assets/PlayStation_Store_Card.png");
-const IMG_ITU    = require("../../assets/itunes-gifts-for-business-hero_2x.jpg");
-const IMG_ROB    = require("../../assets/App-icon-roblox.webp");
-const IMG_UBA    = require("../../assets/UBA Cameroun logo.png");
+const LOGO         = require("../../assets/chreolempire logo avec contact m.png");
+const STORE_BG     = require("../../assets/boutique.png");
+const IMG_PSN      = require("../../assets/PlayStation_Store_Card.png");
+const IMG_ITU      = require("../../assets/itunes-gifts-for-business-hero_2x.jpg");
+const IMG_ROB      = require("../../assets/App-icon-roblox.webp");
+const IMG_UBA      = require("../../assets/UBA Cameroun logo.png");
 const IMG_UBA_CARD = require("../../assets/Carte UBA Cameroun pour RECHARGE.png");
-const IMG_TRANS  = require("../../assets/contenu-pack-transcash.jpg");
-const IMG_CRYPTO = require("../../assets/Monnaie Crypto Chreol Empire en cfa mobile money.png");
+const IMG_TRANS    = require("../../assets/contenu-pack-transcash.jpg");
+const IMG_CRYPTO   = require("../../assets/Monnaie Crypto Chreol Empire en cfa mobile money.png");
+// Réseaux sociaux
+const IC_WA        = require("../../assets/whatsapp.png");
+const IC_INSTA     = require("../../assets/instagram.jpg");
+const IC_X         = require("../../assets/x-twitter.png");
+const IC_EMAIL     = require("../../assets/email.png");
+// telegram.avif non supporté par Metro → placeholder couleur
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -127,6 +135,9 @@ export default function HomeScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
+      {/* ── Banderole taux défilante ── */}
+      <RateTicker />
+
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 130 }}>
 
         {/* ── Hero Banner (photo seule, sans overlays) ── */}
@@ -140,6 +151,9 @@ export default function HomeScreen() {
           {/* Léger gradient bas pour lisibilité */}
           <View style={styles.heroGradient} />
         </MotiView>
+
+        {/* ── Bannière promotions ── */}
+        <PromoBanner />
 
         {/* ── Service Cards 2×2 ── */}
         <View style={styles.grid}>
@@ -231,43 +245,43 @@ export default function HomeScreen() {
           <View style={styles.socialRow}>
             <TouchableOpacity style={styles.socialChip}
               onPress={() => Linking.openURL(`https://wa.me/${CONTACT.whatsapp}`)}>
-              <Text style={styles.socialEmoji}>💬</Text>
+              <Image source={IC_WA} style={styles.socialIcon} contentFit="contain" />
               <Text style={styles.socialLabel}>WhatsApp</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.socialChip}
               onPress={() => Linking.openURL(CONTACT.telegram)}>
-              <Text style={styles.socialEmoji}>✈️</Text>
+              <View style={styles.telegramIcon}>
+                <Text style={styles.telegramLetter}>T</Text>
+              </View>
               <Text style={styles.socialLabel}>Telegram</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.socialChip}
               onPress={() => Linking.openURL("https://www.instagram.com/chreolempire")}>
-              <Text style={styles.socialEmoji}>📸</Text>
+              <Image source={IC_INSTA} style={styles.socialIcon} contentFit="contain" />
               <Text style={styles.socialLabel}>Instagram</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.socialChip}
               onPress={() => Linking.openURL("https://x.com/chreolempire")}>
-              <Text style={styles.socialEmoji}>𝕏</Text>
+              <Image source={IC_X} style={styles.socialIcon} contentFit="contain" />
               <Text style={styles.socialLabel}>X</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.socialChip}
               onPress={() => Linking.openURL(`mailto:${CONTACT.email}`)}>
-              <Text style={styles.socialEmoji}>✉️</Text>
+              <Image source={IC_EMAIL} style={styles.socialIcon} contentFit="contain" />
               <Text style={styles.socialLabel}>Email</Text>
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity onPress={() => Linking.openURL("https://maps.google.com/?q=Chreol+Empire+Deido+Douala+Cameroun")}>
+          <TouchableOpacity onPress={() => Linking.openURL("https://www.google.com/maps/place//data=!4m2!3m1!1s0x106113004d67824f:0x3fb825f9b60b9a06?sa=X&ved=1t:8290&ictx=111")}>
             <Text style={styles.address}>📍 {CONTACT.address}</Text>
           </TouchableOpacity>
         </View>
 
       </ScrollView>
 
-      {/* ── FAB WhatsApp (logo WA en code) ── */}
+      {/* ── FAB WhatsApp ── */}
       <TouchableOpacity style={styles.fabWa} onPress={() => setContactOpen(true)} activeOpacity={0.85}>
-        <View style={styles.waLogoBubble}>
-          <Text style={styles.waLogoPhone}>☎</Text>
-        </View>
+        <Image source={IC_WA} style={styles.fabWaImg} contentFit="contain" />
       </TouchableOpacity>
 
       {/* ── FAB Panier (invisible si vide) ── */}
@@ -436,12 +450,18 @@ const styles = StyleSheet.create({
   // Réseaux sociaux
   socialRow: { flexDirection: "row", gap: 10, flexWrap: "wrap", justifyContent: "center", marginTop: 4 },
   socialChip: {
-    flexDirection: "row", alignItems: "center", gap: 5,
+    flexDirection: "row", alignItems: "center", gap: 6,
     backgroundColor: colors.bg.elevated,
     borderRadius: radius.full, paddingHorizontal: 12, paddingVertical: 7,
     borderWidth: 1, borderColor: colors.border.default,
   },
-  socialEmoji: { fontSize: 14 },
+  socialIcon: { width: 20, height: 20, borderRadius: 4 },
+  telegramIcon: {
+    width: 20, height: 20, borderRadius: 10,
+    backgroundColor: "#0088CC",
+    alignItems: "center", justifyContent: "center",
+  },
+  telegramLetter: { color: "#fff", fontSize: 11, fontWeight: "900" },
   socialLabel: { fontSize: 12, color: colors.text.secondary, fontWeight: "600" },
 
   address: { fontSize: 11, color: colors.brand.gold, textAlign: "center", marginTop: 4, textDecorationLine: "underline" },
@@ -455,13 +475,9 @@ const styles = StyleSheet.create({
     elevation: 10,
     shadowColor: "#25D366", shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.5, shadowRadius: 14,
+    overflow: "hidden",
   },
-  waLogoBubble: {
-    width: 38, height: 38, borderRadius: 19,
-    borderWidth: 2.5, borderColor: "#fff",
-    alignItems: "center", justifyContent: "center",
-  },
-  waLogoPhone: { fontSize: 20, color: "#fff" },
+  fabWaImg: { width: 62, height: 62 },
 
   fabCart: {
     position: "absolute", bottom: 154, right: 20,

@@ -11,8 +11,21 @@ import { MotiView } from "moti";
 import { colors, radius } from "@/constants/theme";
 import { CONTACT } from "@/constants/services";
 import { useCart, CartItem } from "@/contexts/CartContext";
+import { useHistory, OrderType } from "@/contexts/HistoryContext";
+import { useLoyalty } from "@/contexts/LoyaltyContext";
+import { scheduleOrderNotification } from "@/hooks/usePushNotifications";
 
 const IMG_NEERO = require("../assets/Neero paiement @blondelccde.png");
+
+const PAYIMG: Record<string, any> = {
+  mtn:     require("../assets/MTN Mobile Money (MoMo) Payment .png"),
+  orange:  require("../assets/orange-money.png"),
+  paypal:  require("../assets/Paypal.png"),
+  neero:   require("../assets/neero paiement.png"),
+  especes: require("../assets/Espece.png"),
+  crypto:  require("../assets/Cryptomonnaies-visuel.png"),
+  uba:     require("../assets/ubaCameroun_logo.png"),
+};
 
 // ─── Payment methods ──────────────────────────────────────────────────────────
 const PAYMENT_METHODS = [
@@ -20,7 +33,7 @@ const PAYMENT_METHODS = [
   { id: "orange",  label: "Orange Money", icon: "🟠", color: "#FF6600", short: "Transfert UV" },
   { id: "paypal",  label: "PayPal",        icon: "🔵", color: "#003087", short: "Euros" },
   { id: "neero",   label: "Neero",         icon: "💜", color: "#8B5CF6", short: "@blondelccde" },
-  { id: "especes", label: "Espèces",       icon: "💵", color: "#25D366", short: "Bureau Douala" },
+  { id: "especes", label: "Espèces Cash",       icon: "💵", color: "#25D366", short: "Bureau Douala" },
   { id: "crypto",  label: "Crypto",        icon: "₿",  color: "#26A17B", short: "Sur demande" },
   { id: "uba",     label: "Virement UBA",  icon: "🏦", color: "#C9A84C", short: "Sur demande" },
 ] as const;
@@ -153,34 +166,42 @@ function PaymentInstructions({ id, total }: { id: PaymentId; total: number }) {
 }
 
 // ─── Cart item row ─────────────────────────────────────────────────────────────
-function CartItemRow({ item, onQty, onRemove }: {
+function CartItemRow({ item, onQty, onRemove, incompatible }: {
   item: CartItem;
   onQty: (qty: number) => void;
   onRemove: () => void;
+  incompatible?: boolean;
 }) {
   return (
-    <View style={styles.itemRow}>
-      <View style={styles.itemInfo}>
-        <Text style={styles.itemName}>{item.cardName}</Text>
-        <Text style={styles.itemAmount}>{item.amount}</Text>
-        <Text style={styles.itemUnitPrice}>{item.price.toLocaleString("fr-FR")} FCFA / unité</Text>
-      </View>
-      <View style={styles.itemRight}>
-        <View style={styles.qtyRow}>
-          <TouchableOpacity style={styles.qtyBtn}
-            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onQty(item.qty - 1); }}>
-            <Text style={styles.qtyBtnText}>−</Text>
-          </TouchableOpacity>
-          <Text style={styles.qtyValue}>{item.qty}</Text>
-          <TouchableOpacity style={styles.qtyBtn}
-            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onQty(item.qty + 1); }}>
-            <Text style={styles.qtyBtnText}>+</Text>
+    <View>
+      {incompatible && (
+        <View style={styles.incompatBadge}>
+          <Text style={styles.incompatBadgeText}>⊘ Non compatible avec votre commande</Text>
+        </View>
+      )}
+      <View style={[styles.itemRow, incompatible && styles.itemRowIncompat]}>
+        <View style={styles.itemInfo}>
+          <Text style={styles.itemName}>{item.cardName}</Text>
+          <Text style={styles.itemAmount}>{item.amount}</Text>
+          <Text style={styles.itemUnitPrice}>{item.price.toLocaleString("fr-FR")} FCFA / unité</Text>
+        </View>
+        <View style={styles.itemRight}>
+          <View style={styles.qtyRow}>
+            <TouchableOpacity style={styles.qtyBtn}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onQty(item.qty - 1); }}>
+              <Text style={styles.qtyBtnText}>−</Text>
+            </TouchableOpacity>
+            <Text style={styles.qtyValue}>{item.qty}</Text>
+            <TouchableOpacity style={styles.qtyBtn}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onQty(item.qty + 1); }}>
+              <Text style={styles.qtyBtnText}>+</Text>
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.itemTotal}>{(item.price * item.qty).toLocaleString("fr-FR")} F</Text>
+          <TouchableOpacity onPress={onRemove} style={styles.deleteBtn}>
+            <Text style={styles.deleteBtnText}>🗑</Text>
           </TouchableOpacity>
         </View>
-        <Text style={styles.itemTotal}>{(item.price * item.qty).toLocaleString("fr-FR")} F</Text>
-        <TouchableOpacity onPress={onRemove} style={styles.deleteBtn}>
-          <Text style={styles.deleteBtnText}>🗑</Text>
-        </TouchableOpacity>
       </View>
     </View>
   );
@@ -190,57 +211,147 @@ function CartItemRow({ item, onQty, onRemove }: {
 export default function CartScreen() {
   const router = useRouter();
   const { items, updateQty, removeItem, clearCart, total, count } = useCart();
+  const { addEntry } = useHistory();
+  const { addStamp } = useLoyalty();
   const [payment, setPayment] = useState<PaymentId>("mtn");
   const [deliveryEmail, setDeliveryEmail] = useState("");
 
   const selectedMethod = PAYMENT_METHODS.find(m => m.id === payment)!;
-  const isMobileMoney = payment === "mtn" || payment === "orange";
+
+  // Distinguish coupon/crypto-sell/paypal-sell items (Chreol pays) from purchase items
+  const couponItems     = items.filter(i => i.cardId.startsWith("coupon-"));
+  const cryptoSellItems = items.filter(i => i.cardId === "crypto-sell");
+  const paypalSellItems = items.filter(i => i.cardId === "paypal-sell");
+  const regularItems    = items.filter(i => !i.cardId.startsWith("coupon-") && i.cardId !== "crypto-sell" && i.cardId !== "paypal-sell");
+  const allCoupons      = (couponItems.length + cryptoSellItems.length + paypalSellItems.length) > 0 && regularItems.length === 0;
+  const hasConflict     = regularItems.length > 0 && (couponItems.length + cryptoSellItems.length + paypalSellItems.length) > 0;
+  const regularTotal    = regularItems.reduce((sum, i) => sum + i.price * i.qty, 0);
 
   const buildWhatsAppMsg = () => {
-    const lines = items.map(i =>
-      `  • ${i.cardName} ${i.amount} × ${i.qty} = ${(i.price * i.qty).toLocaleString("fr-FR")} FCFA`
-    ).join("\n");
+    let msg = `Bonjour Chreol Empire 👋\n\n`;
 
-    let paymentLine = `${selectedMethod.icon} *${selectedMethod.label}*`;
-    if (payment === "mtn") {
-      paymentLine += `\n  Numéro marchand : 672416141 (ETS Content)\n  Code USSD : *126*14*672416141*${total}#`;
-    } else if (payment === "orange") {
-      paymentLine += `\n  Code marchand : 518554 / Numéro : 692251299 (Ets Tagny)\n  Code USSD : #150*14*518554*692251299*${total}#`;
-    } else if (payment === "paypal") {
-      paymentLine += `\n  Email : LARAMBAMBO@GMAIL.COM (Famille/Proche, en €)`;
-    } else if (payment === "neero") {
-      paymentLine += `\n  Code marchand : @blondelccde (Blondel)`;
-    } else if (payment === "especes") {
-      paymentLine += `\n  Bureau : Vallée 3 Boutiques – Deido, Douala`;
-    } else {
-      paymentLine += ` — sur demande`;
+    // En cas de conflit on n'envoie que les articles réguliers
+    if (hasConflict) {
+      const lines = regularItems.map(i =>
+        `  • ${i.cardName} ${i.amount} × ${i.qty} = ${(i.price * i.qty).toLocaleString("fr-FR")} FCFA`
+      ).join("\n");
+      const m = PAYMENT_METHODS.find(x => x.id === payment)!;
+      let payLine = `${m.icon} *${m.label}*`;
+      if (payment === "mtn") payLine += `\n  Numéro marchand : 672416141\n  Code USSD : *126*14*672416141*${regularTotal}#`;
+      else if (payment === "orange") payLine += `\n  Code marchand : 518554 / Numéro : 692251299\n  Code USSD : #150*14*518554*692251299*${regularTotal}#`;
+      else if (payment === "paypal") payLine += `\n  Email : LARAMBAMBO@GMAIL.COM (Famille/Proche, en €)`;
+      else if (payment === "neero") payLine += `\n  Code marchand : @blondelccde`;
+      else if (payment === "especes") payLine += `\n  Bureau : Vallée 3 Boutiques – Deido, Douala`;
+      else payLine += ` — sur demande`;
+      const emailLine = deliveryEmail.trim() ? `\n📧 *Livraison email :* ${deliveryEmail.trim()}` : "";
+      msg += `📦 *COMMANDE*\n${lines}\n\n💰 *Total : ${regularTotal.toLocaleString("fr-FR")} FCFA*\n\n💳 *Mode de paiement :*\n${payLine}${emailLine}\n\n📸 *Je vais vous envoyer ici la capture d'écran de ma preuve de paiement.*`;
+      return msg;
     }
 
-    const emailLine = deliveryEmail.trim()
-      ? `\n📧 *Livraison par email :* ${deliveryEmail.trim()}`
-      : "";
+    // ── Section échange coupons ──
+    if (couponItems.length > 0) {
+      const lines = couponItems.map(i =>
+        `  • ${i.cardName}\n    ➜ ${i.amount}`
+      ).join("\n");
+      msg += `🎟️ *DEMANDE D'ÉCHANGE COUPONS*\n${lines}\n\n`;
+      msg += `📸 *Je vais vous envoyer ici la photo ou la capture d'écran de mes coupons pour vérification et traitement de l'échange.*`;
+    }
 
-    return (
-      `Bonjour Chreol Empire 👋\n\n` +
-      `📦 *COMMANDE*\n${lines}\n\n` +
-      `💰 *Total : ${total.toLocaleString("fr-FR")} FCFA*\n\n` +
-      `💳 *Mode de paiement :*\n${paymentLine}${emailLine}\n\n` +
-      `⚠️ *Je vais vous envoyer ici la capture d'écran (screenshot) de ma preuve de paiement pour déclencher l'envoi immédiat.*`
-    );
+    // ── Section vente crypto ──
+    if (cryptoSellItems.length > 0) {
+      if (couponItems.length > 0) msg += `\n\n${"─".repeat(30)}\n\n`;
+      const lines = cryptoSellItems.map(i =>
+        `  • ${i.cardName}\n    ➜ Montant à recevoir : ${i.amount}`
+      ).join("\n");
+      msg += `₿ *DEMANDE DE VENTE CRYPTO*\n${lines}\n\n`;
+      msg += `📲 *Je vais vous envoyer ici la capture d'écran de la transaction blockchain prouvant l'envoi des cryptos à votre adresse.*`;
+    }
+
+    // ── Section vente PayPal ──
+    if (paypalSellItems.length > 0) {
+      if (couponItems.length > 0 || cryptoSellItems.length > 0) msg += `\n\n${"─".repeat(30)}\n\n`;
+      const lines = paypalSellItems.map(i =>
+        `  • ${i.cardName}\n    ➜ Montant à recevoir : ${i.amount}`
+      ).join("\n");
+      msg += `💶 *DEMANDE DE VENTE PAYPAL*\n${lines}\n\n`;
+      msg += `📲 *Je vais vous envoyer ici la capture d'écran prouvant l'envoi PayPal à votre adresse email.*`;
+    }
+
+    // ── Section commande d'achat ──
+    if (regularItems.length > 0) {
+      if (couponItems.length > 0) msg += `\n\n${"─".repeat(30)}\n\n`;
+      const lines = regularItems.map(i =>
+        `  • ${i.cardName} ${i.amount} × ${i.qty} = ${(i.price * i.qty).toLocaleString("fr-FR")} FCFA`
+      ).join("\n");
+
+      let paymentLine = `${selectedMethod.icon} *${selectedMethod.label}*`;
+      if (payment === "mtn") {
+        paymentLine += `\n  Numéro marchand : 672416141 (ETS Content)\n  Code USSD : *126*14*672416141*${regularTotal}#`;
+      } else if (payment === "orange") {
+        paymentLine += `\n  Code marchand : 518554 / Numéro : 692251299 (Ets Tagny)\n  Code USSD : #150*14*518554*692251299*${regularTotal}#`;
+      } else if (payment === "paypal") {
+        paymentLine += `\n  Email : LARAMBAMBO@GMAIL.COM (Famille/Proche, en €)`;
+      } else if (payment === "neero") {
+        paymentLine += `\n  Code marchand : @blondelccde (Blondel)`;
+      } else if (payment === "especes") {
+        paymentLine += `\n  Bureau : Vallée 3 Boutiques – Deido, Douala`;
+      } else {
+        paymentLine += ` — sur demande`;
+      }
+
+      const emailLine = deliveryEmail.trim()
+        ? `\n📧 *Livraison par email :* ${deliveryEmail.trim()}`
+        : "";
+
+      msg +=
+        `📦 *COMMANDE*\n${lines}\n\n` +
+        `💰 *Total : ${regularTotal.toLocaleString("fr-FR")} FCFA*\n\n` +
+        `💳 *Mode de paiement :*\n${paymentLine}${emailLine}\n\n` +
+        `📸 *Je vais vous envoyer ici la capture d'écran de ma preuve de paiement pour déclencher l'envoi immédiat de ma commande.*`;
+    }
+
+    return msg;
   };
 
   const handleOrder = async () => {
     if (items.length === 0) return;
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+    // Déterminer le type pour l'historique
+    let type: OrderType = "achat";
+    if (allCoupons) {
+      const kinds = [couponItems.length > 0, cryptoSellItems.length > 0, paypalSellItems.length > 0].filter(Boolean).length;
+      if (kinds > 1) type = "mixte";
+      else if (couponItems.length > 0) type = "coupon";
+      else if (cryptoSellItems.length > 0) type = "crypto-sell";
+      else type = "paypal-sell";
+    }
+
+    // En conflit on ne comptabilise que les articles réguliers
+    const effectiveItems = hasConflict ? regularItems : items;
+    const effectiveTotal = hasConflict ? regularTotal : total;
+    const summary = effectiveItems.map(i => `${i.cardName} ${i.amount}`).join(", ").slice(0, 120);
+
+    await addEntry({
+      type,
+      summary,
+      total: effectiveTotal,
+      paymentMethod: !allCoupons ? selectedMethod.label : undefined,
+      itemCount: effectiveItems.reduce((s, i) => s + i.qty, 0),
+    });
+
     Linking.openURL(`https://wa.me/${CONTACT.whatsapp}?text=${encodeURIComponent(buildWhatsAppMsg())}`);
+    scheduleOrderNotification("submitted", summary);
+    if (!allCoupons) addStamp();
+    clearCart();
   };
 
   const confirmClear = () => Alert.alert(
     "Vider le panier",
-    "Supprimer tous les articles ?",
+    "Êtes-vous sûr(e) de vouloir vider le panier ?\nTous les articles seront supprimés définitivement.",
     [
       { text: "Annuler", style: "cancel" },
-      { text: "Vider", style: "destructive", onPress: () => { clearCart(); router.back(); } },
+      { text: "Tout supprimer", style: "destructive", onPress: () => clearCart() },
     ]
   );
 
@@ -285,86 +396,138 @@ export default function CartScreen() {
         {/* Items */}
         <Text style={styles.sectionLabel}>Articles</Text>
         <View style={styles.itemsCard}>
-          {items.map((item, i) => (
-            <View key={item.id}>
-              {i > 0 && <View style={styles.divider} />}
-              <CartItemRow
-                item={item}
-                onQty={(qty) => updateQty(item.id, qty)}
-                onRemove={() => removeItem(item.id)}
-              />
-            </View>
-          ))}
+          {items.map((item, i) => {
+            const isChreolPays = item.cardId.startsWith("coupon-") || item.cardId === "crypto-sell" || item.cardId === "paypal-sell";
+            return (
+              <View key={item.id}>
+                {i > 0 && <View style={styles.divider} />}
+                <CartItemRow
+                  item={item}
+                  onQty={(qty) => updateQty(item.id, qty)}
+                  onRemove={() => removeItem(item.id)}
+                  incompatible={hasConflict && isChreolPays}
+                />
+              </View>
+            );
+          })}
         </View>
+
+        {/* ── BANNIÈRE CONFLIT ── */}
+        {hasConflict && (
+          <View style={styles.conflictBanner}>
+            <Text style={styles.conflictBannerTitle}>⚠️ Services incompatibles détectés</Text>
+            <Text style={styles.conflictBannerText}>
+              {"Les services où Chreol Empire vous paie (échange coupon, vente crypto, vente PayPal) ne peuvent pas être combinés avec un achat. Les services incompatibles sont exclus de la commande."}
+            </Text>
+            <TouchableOpacity
+              style={styles.conflictRemoveBtn}
+              onPress={() => {
+                couponItems.forEach(i => removeItem(i.id));
+                cryptoSellItems.forEach(i => removeItem(i.id));
+                paypalSellItems.forEach(i => removeItem(i.id));
+              }}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.conflictRemoveBtnText}>🗑 Retirer les services incompatibles</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Total */}
         <View style={styles.totalCard}>
-          <Text style={styles.totalLabel}>Total commande</Text>
-          <Text style={styles.totalValue}>{total.toLocaleString("fr-FR")} FCFA</Text>
+          <Text style={styles.totalLabel}>
+            {allCoupons ? "Montant à recevoir" : "Total commande"}
+          </Text>
+          <Text style={styles.totalValue}>
+            {(hasConflict ? regularTotal : total).toLocaleString("fr-FR")} FCFA
+          </Text>
         </View>
 
-        {/* Payment method selector */}
-        <Text style={styles.sectionLabel}>Mode de paiement</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.payChips}>
-          {PAYMENT_METHODS.map(m => (
-            <TouchableOpacity
-              key={m.id}
-              style={[styles.payChip, payment === m.id && { borderColor: m.color, backgroundColor: m.color + "20" }]}
-              onPress={() => setPayment(m.id)}
-              activeOpacity={0.8}
+        {/* ── MODE DE PAIEMENT — masqué pour les échanges coupons ── */}
+        {!allCoupons && (
+          <>
+            <Text style={styles.sectionLabel}>Mode de paiement</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.payChips}>
+              {PAYMENT_METHODS.map(m => (
+                <TouchableOpacity
+                  key={m.id}
+                  style={[styles.payChip, payment === m.id && { borderColor: m.color, backgroundColor: m.color + "20" }]}
+                  onPress={() => setPayment(m.id)}
+                  activeOpacity={0.8}
+                >
+                  <Image source={PAYIMG[m.id]} style={styles.payChipImg} contentFit="contain" />
+                  <Text style={[styles.payChipLabel, payment === m.id && { color: colors.text.primary }]}>{m.label}</Text>
+                  <Text style={[styles.payChipShort, payment === m.id && { color: m.color }]}>{m.short}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <MotiView
+              key={payment}
+              from={{ opacity: 0, translateY: 8 }}
+              animate={{ opacity: 1, translateY: 0 }}
+              transition={{ type: "timing", duration: 280 }}
+              style={[styles.instrCard, { borderColor: selectedMethod.color + "55" }]}
             >
-              <Text style={{ fontSize: 20 }}>{m.icon}</Text>
-              <Text style={[styles.payChipLabel, payment === m.id && { color: colors.text.primary }]}>{m.label}</Text>
-              <Text style={[styles.payChipShort, payment === m.id && { color: m.color }]}>{m.short}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+              <PaymentInstructions id={payment} total={regularTotal} />
+            </MotiView>
 
-        {/* Payment instructions */}
-        <MotiView
-          key={payment}
-          from={{ opacity: 0, translateY: 8 }}
-          animate={{ opacity: 1, translateY: 0 }}
-          transition={{ type: "timing", duration: 280 }}
-          style={[styles.instrCard, { borderColor: selectedMethod.color + "55" }]}
-        >
-          <PaymentInstructions id={payment} total={total} />
-        </MotiView>
+            <View style={styles.emailSection}>
+              <Text style={styles.sectionLabel}>Livraison par email (optionnel)</Text>
+              <View style={styles.emailRow}>
+                <Text style={styles.emailIcon}>📧</Text>
+                <TextInput
+                  style={styles.emailInput}
+                  value={deliveryEmail}
+                  onChangeText={setDeliveryEmail}
+                  placeholder="votre@email.com"
+                  placeholderTextColor={colors.text.muted}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  returnKeyType="done"
+                />
+              </View>
+              <Text style={styles.emailNote}>
+                Renseignez votre adresse email si vous souhaitez recevoir vos codes par email (en plus de WhatsApp)
+              </Text>
+            </View>
 
-        {/* Email delivery */}
-        <View style={styles.emailSection}>
-          <Text style={styles.sectionLabel}>Livraison par email (optionnel)</Text>
-          <View style={styles.emailRow}>
-            <Text style={styles.emailIcon}>📧</Text>
-            <TextInput
-              style={styles.emailInput}
-              value={deliveryEmail}
-              onChangeText={setDeliveryEmail}
-              placeholder="votre@email.com"
-              placeholderTextColor={colors.text.muted}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              returnKeyType="done"
-            />
+            <View style={styles.proofBox}>
+              <Text style={styles.proofTitle}>📸 Preuve de paiement obligatoire</Text>
+              <Text style={styles.proofText}>
+                {"Une fois votre paiement effectué, envoyez-nous ici la capture d'écran de votre reçu pour déclencher l'envoi immédiat de vos codes."}
+              </Text>
+            </View>
+          </>
+        )}
+
+        {/* ── RAPPEL COUPON — visible uniquement pour les échanges ── */}
+        {couponItems.length > 0 && (
+          <View style={styles.couponReminderBox}>
+            <Text style={styles.couponReminderTitle}>📸 Envoi des coupons requis</Text>
+            <Text style={styles.couponReminderText}>
+              {"Après soumission, envoyez-nous ici la photo ou la capture d'écran de vos coupons sur WhatsApp.\nNous traiterons l'échange dès vérification de vos codes."}
+            </Text>
           </View>
-          <Text style={styles.emailNote}>
-            Renseignez votre adresse email si vous souhaitez recevoir vos codes par email (en plus de WhatsApp)
-          </Text>
-        </View>
+        )}
 
-        {/* Screenshot proof reminder */}
-        <View style={styles.proofBox}>
-          <Text style={styles.proofTitle}>📸 Preuve de paiement obligatoire</Text>
-          <Text style={styles.proofText}>
-            {"Une fois votre paiement effectué, envoyez-nous ici la capture d'écran (screenshot) de votre reçu ou preuve de transaction pour déclencher l'envoi immédiat de vos codes."}
-          </Text>
-        </View>
+        {/* ── RAPPEL PAYPAL SELL ── */}
+        {paypalSellItems.length > 0 && (
+          <View style={styles.paypalReminderBox}>
+            <Text style={styles.paypalReminderTitle}>📲 Envoi de la preuve PayPal requis</Text>
+            <Text style={styles.paypalReminderText}>
+              {"Après soumission, envoyez-nous la capture d'écran prouvant l'envoi PayPal à notre adresse email.\nNous traiterons le virement Mobile Money dès vérification."}
+            </Text>
+          </View>
+        )}
 
         {/* Warning */}
         <View style={styles.warningBox}>
           <Text style={styles.warningTitle}>⚠️ Important</Text>
           <Text style={styles.warningText}>
-            {"• Vérifiez bien votre commande avant envoi\n• Aucune modification possible après validation\n• Livraison en 15–30 min après confirmation du paiement"}
+            {allCoupons
+              ? "• Vérifiez vos codes avant envoi\n• L'échange est traité après vérification\n• Paiement Mobile Money sous 15–30 min après confirmation"
+              : "• Vérifiez bien votre commande avant envoi\n• Aucune modification possible après validation\n• Livraison en 15–30 min après confirmation du paiement"}
           </Text>
         </View>
 
@@ -374,13 +537,27 @@ export default function CartScreen() {
       {/* Bottom */}
       <View style={styles.bottomBar}>
         <View style={styles.bottomRow}>
-          <Text style={styles.bottomTotal}>{total.toLocaleString("fr-FR")} FCFA</Text>
-          <Text style={[styles.bottomMethod, { color: selectedMethod.color }]}>
-            {selectedMethod.icon} {selectedMethod.label}
-          </Text>
+          <View>
+            <Text style={styles.bottomTotalLabel}>
+              {allCoupons ? "À recevoir" : "À payer"}
+            </Text>
+            <Text style={styles.bottomTotal}>{(hasConflict ? regularTotal : total).toLocaleString("fr-FR")} FCFA</Text>
+          </View>
+          {!allCoupons && (
+            <Text style={[styles.bottomMethod, { color: selectedMethod.color }]}>
+              {selectedMethod.icon} {selectedMethod.label}
+            </Text>
+          )}
+          {allCoupons && (
+            <Text style={[styles.bottomMethod, { color: "#25D366" }]}>
+              📱 Mobile Money
+            </Text>
+          )}
         </View>
         <TouchableOpacity style={styles.orderBtn} onPress={handleOrder} activeOpacity={0.87}>
-          <Text style={styles.orderBtnText}>💬  Valider &amp; envoyer sur WhatsApp</Text>
+          <Text style={styles.orderBtnText}>
+            {allCoupons ? "💬  Soumettre ma demande d'échange" : "💬  Valider & envoyer sur WhatsApp"}
+          </Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -451,6 +628,27 @@ const styles = StyleSheet.create({
   },
 
   // Items
+  itemRowIncompat: { opacity: 0.45, backgroundColor: "#1A0800" },
+  incompatBadge: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    backgroundColor: "#FF6B0022", borderRadius: 6,
+    paddingHorizontal: 8, paddingVertical: 3,
+    marginLeft: 14, marginBottom: 8,
+  },
+  incompatBadgeText: { fontSize: 10, fontWeight: "800", color: "#FF6B00" },
+  conflictBanner: {
+    backgroundColor: "#1A0800",
+    borderRadius: radius.lg,
+    padding: 14, borderWidth: 1, borderColor: "#FF6B0055",
+  },
+  conflictBannerTitle: { fontSize: 13, fontWeight: "800", color: "#FF6B00", marginBottom: 6 },
+  conflictBannerText: { fontSize: 12, color: "#CC7030", lineHeight: 18, marginBottom: 10 },
+  conflictRemoveBtn: {
+    backgroundColor: "#FF6B0022", borderRadius: radius.full,
+    borderWidth: 1, borderColor: "#FF6B0055",
+    paddingVertical: 8, alignItems: "center",
+  },
+  conflictRemoveBtnText: { fontSize: 12, fontWeight: "800", color: "#FF6B00" },
   itemsCard: {
     backgroundColor: colors.bg.card,
     borderRadius: radius.xl,
@@ -504,6 +702,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg.card,
     minWidth: 90,
   },
+  payChipImg: { width: 32, height: 32, borderRadius: 8 },
   payChipLabel: { fontSize: 11, fontWeight: "800", color: colors.text.muted, textAlign: "center" },
   payChipShort: { fontSize: 9, fontWeight: "600", color: colors.text.muted },
 
@@ -546,6 +745,24 @@ const styles = StyleSheet.create({
   },
   emailNote: { fontSize: 11, color: colors.text.muted, lineHeight: 16 },
 
+  // Coupon reminder (exchange orders)
+  couponReminderBox: {
+    backgroundColor: "#0D1A2A",
+    borderRadius: radius.lg,
+    padding: 14, borderWidth: 1, borderColor: "#3B82F644",
+  },
+  couponReminderTitle: { fontSize: 13, fontWeight: "800", color: "#60A5FA", marginBottom: 8 },
+  couponReminderText: { fontSize: 12, color: "#93C5FD", lineHeight: 19 },
+
+  // PayPal sell reminder
+  paypalReminderBox: {
+    backgroundColor: "#0A1020",
+    borderRadius: radius.lg,
+    padding: 14, borderWidth: 1, borderColor: "#003087" + "55",
+  },
+  paypalReminderTitle: { fontSize: 13, fontWeight: "800", color: "#6BA3BE", marginBottom: 8 },
+  paypalReminderText: { fontSize: 12, color: "#93C5D0", lineHeight: 19 },
+
   // Warning
   warningBox: {
     backgroundColor: "#1A0A00",
@@ -566,6 +783,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3, shadowRadius: 12, elevation: 12,
   },
   bottomRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  bottomTotalLabel: { fontSize: 10, fontWeight: "700", color: colors.text.muted, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 2 },
   bottomTotal: { fontSize: 20, fontWeight: "900", color: colors.text.primary },
   bottomMethod: { fontSize: 13, fontWeight: "700" },
   orderBtn: {

@@ -3,9 +3,30 @@
     "name": "Chreol Empire",
     "slug": "chreolempire-mobile",
     "version": "1.0.0",
+    "description": "Chreol Empire — N°1 au Cameroun pour l'achat de cartes cadeaux (PSN, iTunes, Roblox, Xbox, Netflix), l'échange de coupons (PCS Mastercard, Transcash), l'achat et vente de cryptomonnaies (USDT, Bitcoin, TRX, USDC) et de solde PayPal Europe. Paiement Mobile Money Orange Money et MTN MoMo. Livraison express en 15–30 min par WhatsApp ou Email. Bureau à Deido, Douala, Cameroun.",
+    "keywords": [
+      "cartes cadeaux cameroun",
+      "PSN cameroun",
+      "iTunes cameroun",
+      "Roblox cameroun",
+      "Xbox cameroun",
+      "Netflix cameroun",
+      "crypto cameroun",
+      "USDT cameroun",
+      "Bitcoin cameroun",
+      "PayPal cameroun",
+      "PCS mastercard cameroun",
+      "Transcash cameroun",
+      "Orange Money Douala",
+      "MTN MoMo Douala",
+      "échange coupon cameroun",
+      "recharge UBA cameroun",
+      "Chreol Empire Douala"
+    ],
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
+    "primaryColor": "#C9A84C",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -15,7 +36,14 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.chreolempire.mobile",
-      "googleServicesFile": "./GoogleService-Info.plist"
+      "buildNumber": "1",
+      "googleServicesFile": "./GoogleService-Info.plist",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Permet de scanner les codes QR et de photographier les coupons.",
+        "NSPhotoLibraryUsageDescription": "Permet de partager des captures d'écran de paiement.",
+        "CFBundleLocalizations": ["fr", "en"],
+        "CFBundleDevelopmentRegion": "fr"
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -23,13 +51,36 @@
         "backgroundColor": "#0A0B0F"
       },
       "package": "com.chreolempire.mobile",
+      "versionCode": 1,
       "googleServicesFile": "./google-services.json",
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "INTERNET",
+        "VIBRATE",
+        "RECEIVE_BOOT_COMPLETED"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            { "scheme": "https", "host": "chreolempire.com" },
+            { "scheme": "https", "host": "www.chreolempire.com" }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
-      "bundler": "metro"
+      "bundler": "metro",
+      "name": "Chreol Empire — Cartes Cadeaux & Crypto Cameroun",
+      "shortName": "Chreol Empire",
+      "description": "Achetez vos cartes cadeaux PSN, iTunes, Roblox au meilleur prix au Cameroun. Échange de coupons PCS & Transcash. Achat/vente USDT, Bitcoin, PayPal. Orange Money & MTN MoMo. Douala, Cameroun.",
+      "themeColor": "#C9A84C",
+      "backgroundColor": "#0A0B0F",
+      "lang": "fr"
     },
     "scheme": "chreolempire",
     "plugins": [
@@ -44,6 +95,13 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "chreolempire-mobile"
+      },
+      "appStoreUrl": "https://apps.apple.com/app/chreol-empire/id000000000",
+      "playStoreUrl": "https://play.google.com/store/apps/details?id=com.chreolempire.mobile"
     }
   }
 }

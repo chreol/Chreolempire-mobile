@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  TextInput, KeyboardAvoidingView, Platform,
+  TextInput, KeyboardAvoidingView, Platform, Share,
 } from "react-native";
 import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -9,8 +9,9 @@ import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { MotiView } from "moti";
 import { colors, radius } from "@/constants/theme";
-import { GIFT_CARDS } from "@/constants/services";
+import { GIFT_CARDS, CONTACT } from "@/constants/services";
 import { useCart } from "@/contexts/CartContext";
+import { useStockStatus } from "@/hooks/useStockStatus";
 
 const LOCAL_IMAGES: Record<string, any> = {
   psn:        require("../../assets/PlayStation_Store_Card.png"),
@@ -42,6 +43,7 @@ const CUSTOM_RATE = 750; // FCFA per currency unit
 export default function CartesCadeauxScreen() {
   const router = useRouter();
   const { addItem, count } = useCart();
+  const { getStatus } = useStockStatus();
 
   const [activeTab, setActiveTab] = useState<TabKey>("standard");
   const [selectedCard, setSelectedCard] = useState<string | null>(null);
@@ -58,6 +60,17 @@ export default function CartesCadeauxScreen() {
   const customPrice = !isNaN(customNum) && customNum > 0 ? Math.round(customNum * CUSTOM_RATE) : null;
 
   const canAdd = card && (amount || customPrice);
+
+  const handleShare = async () => {
+    if (!card) return;
+    const finalLabel = customPrice ? `${customValue}€ (personnalisé)` : amount?.label ?? "";
+    const finalPrice = (customPrice ?? amount?.price ?? 0).toLocaleString("fr-FR");
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    await Share.share({
+      title: `${card.name} — Chreol Empire 🇨🇲`,
+      message: `🎮 *${card.name}* ${finalLabel} [${selectedRegion}]\n💰 Prix : ${finalPrice} FCFA\n\n📲 Commander chez Chreol Empire :\nhttps://wa.me/${CONTACT.whatsapp}?text=${encodeURIComponent(`Bonjour, je veux commander ${card.name} ${finalLabel} [${selectedRegion}] — ${finalPrice} FCFA`)}\n\n⚡ Livraison en 15–30 min via WhatsApp`,
+    });
+  };
 
   const handleTabChange = (tab: TabKey) => {
     setActiveTab(tab);
@@ -167,24 +180,28 @@ export default function CartesCadeauxScreen() {
           {/* Card selector */}
           <Text style={styles.sectionLabel}>Carte</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cardRow}>
-            {filteredCards.map(c => (
-              <TouchableOpacity
-                key={c.id}
-                style={[styles.cardChip, selectedCard === c.id && { borderColor: c.color, backgroundColor: c.color + "18" }]}
-                onPress={() => handleCardSelect(c.id)}
-                activeOpacity={0.8}
-              >
-                <Image source={LOCAL_IMAGES[c.localImage]} style={styles.cardChipImg} contentFit="contain" />
-                <Text style={[styles.cardChipText, selectedCard === c.id && { color: colors.text.primary }]}>
-                  {c.name}
-                </Text>
-                {selectedCard === c.id && (
-                  <View style={[styles.cardChipCheck, { backgroundColor: c.color }]}>
-                    <Text style={{ color: "#fff", fontSize: 10, fontWeight: "800" }}>✓</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-            ))}
+            {filteredCards.map(c => {
+              const stock = getStatus(c.id);
+              return (
+                <TouchableOpacity
+                  key={c.id}
+                  style={[styles.cardChip, selectedCard === c.id && { borderColor: c.color, backgroundColor: c.color + "18" }]}
+                  onPress={() => handleCardSelect(c.id)}
+                  activeOpacity={0.8}
+                >
+                  <Image source={LOCAL_IMAGES[c.localImage]} style={styles.cardChipImg} contentFit="contain" />
+                  <Text style={[styles.cardChipText, selectedCard === c.id && { color: colors.text.primary }]}>
+                    {c.name}
+                  </Text>
+                  <Text style={[styles.stockBadge, { color: stock.color }]}>{stock.label}</Text>
+                  {selectedCard === c.id && (
+                    <View style={[styles.cardChipCheck, { backgroundColor: c.color }]}>
+                      <Text style={{ color: "#fff", fontSize: 10, fontWeight: "800" }}>✓</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
           </ScrollView>
 
           {/* Amount grid + custom value */}
@@ -268,15 +285,20 @@ export default function CartesCadeauxScreen() {
                 {(customPrice ?? amount?.price ?? 0).toLocaleString("fr-FR")} FCFA
               </Text>
             </View>
-            <TouchableOpacity
-              style={[styles.addBtn, addedFlash && styles.addBtnSuccess]}
-              onPress={handleAddToCart}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.addBtnText}>
-                {addedFlash ? "✓ Ajouté au panier !" : "Ajouter au panier 🛒"}
-              </Text>
-            </TouchableOpacity>
+            <View style={styles.bottomActions}>
+              <TouchableOpacity style={styles.shareBtn} onPress={handleShare} activeOpacity={0.8}>
+                <Text style={styles.shareBtnText}>📤</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.addBtn, addedFlash && styles.addBtnSuccess]}
+                onPress={handleAddToCart}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.addBtnText}>
+                  {addedFlash ? "✓ Ajouté au panier !" : "Ajouter au panier 🛒"}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </MotiView>
         )}
       </SafeAreaView>
@@ -361,6 +383,7 @@ const styles = StyleSheet.create({
   },
   cardChipImg: { width: 48, height: 36 },
   cardChipText: { fontSize: 10, fontWeight: "700", color: colors.text.muted, textAlign: "center" },
+  stockBadge: { fontSize: 9, fontWeight: "700", textAlign: "center" },
   cardChipCheck: {
     position: "absolute", top: 6, right: 6,
     width: 18, height: 18, borderRadius: 9,
@@ -434,6 +457,7 @@ const styles = StyleSheet.create({
   bottomCardName: { fontSize: 12, color: colors.text.secondary, fontWeight: "600", flex: 1, marginRight: 8 },
   bottomPrice: { fontSize: 16, fontWeight: "900", color: colors.text.primary },
   addBtn: {
+    flex: 1,
     backgroundColor: colors.brand.gold,
     borderRadius: radius.full,
     paddingVertical: 15,
@@ -444,4 +468,12 @@ const styles = StyleSheet.create({
   },
   addBtnSuccess: { backgroundColor: "#25D366" },
   addBtnText: { fontSize: 15, fontWeight: "800", color: "#0A0A0A" },
+  bottomActions: { flexDirection: "row", gap: 10, alignItems: "center" },
+  shareBtn: {
+    width: 50, height: 50, borderRadius: radius.full,
+    backgroundColor: colors.bg.elevated,
+    borderWidth: 1, borderColor: colors.border.default,
+    alignItems: "center", justifyContent: "center",
+  },
+  shareBtnText: { fontSize: 20 },
 });

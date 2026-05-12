@@ -9,7 +9,7 @@ const { width } = Dimensions.get("window");
 
 const IMG_PSN    = require("../assets/PlayStation_Store_Card.png");
 const IMG_CPN    = require("../assets/PCs MAstercard Transcash bureau de Change coupon de Deido.png");
-const IMG_STORE  = require("../assets/Photo de la boutique bureau de change pcs mastercard et Transcash.png");
+const IMG_STORE  = require("../assets/boutique.png");
 
 const slides = [
   {

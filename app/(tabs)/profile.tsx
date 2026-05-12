@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Linking } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Linking, ScrollView } from "react-native";
 import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -8,6 +8,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useOrders } from "@/hooks/useOrders";
 import { colors, radius } from "@/constants/theme";
 import { CONTACT } from "@/constants/services";
+import LoyaltyCard from "@/components/LoyaltyCard";
+import { useHistory } from "@/contexts/HistoryContext";
 
 const DEMO_MODE = process.env.EXPO_PUBLIC_DEMO_MODE === "true";
 
@@ -20,6 +22,7 @@ const menuItems = [
 export default function ProfileScreen() {
   const { user } = useAuth();
   const { orders } = useOrders(user?.uid);
+  const { history } = useHistory();
   const router = useRouter();
 
   const deliveredCount = orders.filter((o) => o.status === "delivered").length;
@@ -56,6 +59,7 @@ export default function ProfileScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Mon Profil</Text>
       </View>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
 
       {/* User card */}
       <MotiView
@@ -86,8 +90,8 @@ export default function ProfileScreen() {
         {/* Stats */}
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{orders.length}</Text>
-            <Text style={styles.statLabel}>Commandes</Text>
+            <Text style={styles.statValue}>{history.length}</Text>
+            <Text style={styles.statLabel}>Envois WA</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
@@ -103,6 +107,11 @@ export default function ProfileScreen() {
           </View>
         </View>
       </MotiView>
+
+      {/* Loyalty Card */}
+      <View style={styles.loyaltyWrap}>
+        <LoyaltyCard />
+      </View>
 
       {/* Menu items */}
       <View style={styles.menuSection}>
@@ -138,6 +147,7 @@ export default function ProfileScreen() {
 
       {/* App version */}
       <Text style={styles.version}>Chreol Empire v1.0.0 · 🇨🇲</Text>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -182,6 +192,7 @@ const styles = StyleSheet.create({
   statValue: { fontSize: 20, fontWeight: "800", color: colors.text.primary },
   statLabel: { fontSize: 11, color: colors.text.muted, marginTop: 3 },
   statDivider: { width: 1, height: 32, backgroundColor: colors.border.default },
+  loyaltyWrap: { marginHorizontal: 16, marginTop: 16 },
   menuSection: { padding: 16, gap: 8 },
   menuItem: {
     flexDirection: "row", alignItems: "center",
