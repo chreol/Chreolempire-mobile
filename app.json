@@ -37,11 +37,13 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.chreolempire.mobile",
       "buildNumber": "1",
-      "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
         "NSCameraUsageDescription": "Permet de scanner les codes QR et de photographier les coupons.",
         "NSPhotoLibraryUsageDescription": "Permet de partager des captures d'écran de paiement.",
-        "CFBundleLocalizations": ["fr", "en"],
+        "CFBundleLocalizations": [
+          "fr",
+          "en"
+        ],
         "CFBundleDevelopmentRegion": "fr"
       }
     },
@@ -52,7 +54,6 @@
       },
       "package": "com.chreolempire.mobile",
       "versionCode": 1,
-      "googleServicesFile": "./google-services.json",
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "permissions": [
@@ -65,10 +66,19 @@
           "action": "VIEW",
           "autoVerify": true,
           "data": [
-            { "scheme": "https", "host": "chreolempire.com" },
-            { "scheme": "https", "host": "www.chreolempire.com" }
+            {
+              "scheme": "https",
+              "host": "chreolempire.com"
+            },
+            {
+              "scheme": "https",
+              "host": "www.chreolempire.com"
+            }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
@@ -97,11 +107,13 @@
       "typedRoutes": true
     },
     "extra": {
-      "eas": {
-        "projectId": "chreolempire-mobile"
-      },
       "appStoreUrl": "https://apps.apple.com/app/chreol-empire/id000000000",
-      "playStoreUrl": "https://play.google.com/store/apps/details?id=com.chreolempire.mobile"
-    }
+      "playStoreUrl": "https://play.google.com/store/apps/details?id=com.chreolempire.mobile",
+      "router": {},
+      "eas": {
+        "projectId": "bc87a9b2-d77a-4f4e-8637-b68080b5c199"
+      }
+    },
+    "owner": "chreol"
   }
 }
