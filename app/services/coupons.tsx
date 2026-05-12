@@ -12,7 +12,7 @@ import { colors, radius } from "@/constants/theme";
 import { CONTACT, COUPON_RATES } from "@/constants/services";
 import { useCart } from "@/contexts/CartContext";
 
-const IMG_HERO  = require("../../assets/pcs_alternative_a_transcash_b272.png");
+const IMG_HERO  = require("../../assets/pcs_alternative_a_transcash_b272.jpg");
 const IMG_PCS   = require("../../assets/PCS-Mastercard.png");
 const IMG_TRANS = require("../../assets/echange-transcash.png");
 

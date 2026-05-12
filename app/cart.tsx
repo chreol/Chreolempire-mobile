@@ -15,15 +15,15 @@ import { useHistory, OrderType } from "@/contexts/HistoryContext";
 import { useLoyalty } from "@/contexts/LoyaltyContext";
 import { scheduleOrderNotification } from "@/hooks/usePushNotifications";
 
-const IMG_NEERO = require("../assets/Neero paiement @blondelccde.png");
+const IMG_NEERO = require("../assets/Neero paiement @blondelccde.jpg");
 
 const PAYIMG: Record<string, any> = {
   mtn:     require("../assets/MTN Mobile Money (MoMo) Payment .png"),
   orange:  require("../assets/orange-money.png"),
-  paypal:  require("../assets/Paypal.png"),
-  neero:   require("../assets/neero paiement.png"),
+  paypal:  require("../assets/Paypal.jpg"),
+  neero:   require("../assets/neero paiement.jpg"),
   especes: require("../assets/Espece.png"),
-  crypto:  require("../assets/Cryptomonnaies-visuel.png"),
+  crypto:  require("../assets/Cryptomonnaies-visuel.jpg"),
   uba:     require("../assets/ubaCameroun_logo.png"),
 };
 

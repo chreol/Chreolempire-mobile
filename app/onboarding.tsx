@@ -8,8 +8,8 @@ import { colors, radius } from "@/constants/theme";
 const { width } = Dimensions.get("window");
 
 const IMG_PSN    = require("../assets/PlayStation_Store_Card.png");
-const IMG_CPN    = require("../assets/PCs MAstercard Transcash bureau de Change coupon de Deido.png");
-const IMG_STORE  = require("../assets/boutique.png");
+const IMG_CPN    = require("../assets/PCs MAstercard Transcash bureau de Change coupon de Deido.jpg");
+const IMG_STORE  = require("../assets/boutique.jpg");
 
 const slides = [
   {

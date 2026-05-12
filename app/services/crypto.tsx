@@ -11,7 +11,7 @@ import * as Haptics from "expo-haptics";
 import { colors, radius } from "@/constants/theme";
 import { useCart } from "@/contexts/CartContext";
 
-const IMG_HERO = require("../../assets/Cryptomonnaies-visuel.png");
+const IMG_HERO = require("../../assets/Cryptomonnaies-visuel.jpg");
 
 type Direction = "sell" | "buy";
 type MomoNetwork = "orange" | "mtn";

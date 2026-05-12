@@ -3,7 +3,7 @@ import { View, Text, StyleSheet } from "react-native";
 import { Image } from "expo-image";
 import { colors } from "@/constants/theme";
 
-const LOGO_NEW = require("../../assets/chreol empire  new.png");
+const LOGO_NEW = require("../../assets/chreol empire  new.jpg");
 
 function AccueilIcon({ focused }: { focused: boolean }) {
   return (

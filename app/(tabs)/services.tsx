@@ -13,11 +13,11 @@ const IMG_PSN      = require("../../assets/PlayStation_Store_Card.png");
 const IMG_ITU      = require("../../assets/itunes-gifts-for-business-hero_2x.jpg");
 const IMG_ROB      = require("../../assets/App-icon-roblox.webp");
 const IMG_STEAM    = require("../../assets/Steam_Gift_Cards.png");
-const IMG_CRYPTO   = require("../../assets/Cryptomonnaies-visuel.png");
+const IMG_CRYPTO   = require("../../assets/Cryptomonnaies-visuel.jpg");
 const IMG_UBA      = require("../../assets/UBA Cameroun logo.png");
 const IMG_TRANS    = require("../../assets/contenu-pack-transcash.jpg");
-const IMG_PAYPAL   = require("../../assets/Paypal.png");
-const IMG_FACTURES = require("../../assets/paiement-+-facture-services.png");
+const IMG_PAYPAL   = require("../../assets/Paypal.jpg");
+const IMG_FACTURES = require("../../assets/paiement-+-facture-services.jpg");
 
 const PRODUCT_TILES = [
   { img: IMG_ROB,    label: "Roblox",      route: "/services/cartes-cadeaux" },

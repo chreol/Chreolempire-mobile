@@ -18,8 +18,8 @@ const LOCAL_IMAGES: Record<string, any> = {
   itunes:     require("../../assets/itunes-gifts-for-business-hero_2x.jpg"),
   roblox:     require("../../assets/App-icon-roblox.webp"),
   steam:      require("../../assets/Steam_Gift_Cards.png"),
-  razer:      require("../../assets/Gift_cards-Razer_Gold.png"),
-  nintendo:   require("../../assets/Gift card Nintendo.png"),
+  razer:      require("../../assets/Gift_cards-Razer_Gold.jpg"),
+  nintendo:   require("../../assets/Gift card Nintendo.jpg"),
   googleplay: require("../../assets/Gift card GooglePlay.png"),
 };
 

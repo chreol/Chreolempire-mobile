@@ -18,20 +18,20 @@ import { useOrders } from "@/hooks/useOrders";
 const { width } = Dimensions.get("window");
 const CARD_W = (width - 44) / 2;
 
-const LOGO         = require("../../assets/chreolempire logo avec contact m.png");
-const STORE_BG     = require("../../assets/boutique.png");
+const LOGO         = require("../../assets/chreolempire logo avec contact m.jpg");
+const STORE_BG     = require("../../assets/boutique.jpg");
 const IMG_PSN      = require("../../assets/PlayStation_Store_Card.png");
 const IMG_ITU      = require("../../assets/itunes-gifts-for-business-hero_2x.jpg");
 const IMG_ROB      = require("../../assets/App-icon-roblox.webp");
 const IMG_UBA      = require("../../assets/UBA Cameroun logo.png");
-const IMG_UBA_CARD = require("../../assets/Carte UBA Cameroun pour RECHARGE.png");
+const IMG_UBA_CARD = require("../../assets/Carte UBA Cameroun pour RECHARGE.jpg");
 const IMG_TRANS    = require("../../assets/contenu-pack-transcash.jpg");
-const IMG_CRYPTO   = require("../../assets/Monnaie Crypto Chreol Empire en cfa mobile money.png");
+const IMG_CRYPTO   = require("../../assets/Monnaie Crypto Chreol Empire en cfa mobile money.jpg");
 // Réseaux sociaux
 const IC_WA        = require("../../assets/whatsapp.png");
 const IC_INSTA     = require("../../assets/instagram.jpg");
 const IC_X         = require("../../assets/x-twitter.png");
-const IC_EMAIL     = require("../../assets/email.png");
+const IC_EMAIL     = require("../../assets/email.jpg");
 // telegram.avif non supporté par Metro → placeholder couleur
 
 export default function HomeScreen() {
