@@ -29,9 +29,9 @@ const IMG_CRYPTO   = require("../../assets/Monnaie Crypto Chreol Empire en cfa m
 // Réseaux sociaux
 const IC_WA        = require("../../assets/whatsapp.png");
 const IC_INSTA     = require("../../assets/instagram.jpg");
+const IC_TG        = require("../../assets/telegram.png");
 const IC_X         = require("../../assets/x-twitter.png");
 const IC_EMAIL     = require("../../assets/email.png");
-// telegram.avif non supporté par Metro → placeholder couleur
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -248,9 +248,7 @@ export default function HomeScreen() {
             </TouchableOpacity>
             <TouchableOpacity style={styles.socialChip}
               onPress={() => Linking.openURL(CONTACT.telegram)}>
-              <View style={styles.telegramIcon}>
-                <Text style={styles.telegramLetter}>T</Text>
-              </View>
+              <Image source={IC_TG} style={styles.socialIcon} contentFit="contain" />
               <Text style={styles.socialLabel}>Telegram</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.socialChip}
@@ -454,12 +452,6 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border.default,
   },
   socialIcon: { width: 20, height: 20, borderRadius: 4 },
-  telegramIcon: {
-    width: 20, height: 20, borderRadius: 10,
-    backgroundColor: "#0088CC",
-    alignItems: "center", justifyContent: "center",
-  },
-  telegramLetter: { color: "#fff", fontSize: 11, fontWeight: "900" },
   socialLabel: { fontSize: 12, color: colors.text.secondary, fontWeight: "600" },
 
   address: { fontSize: 11, color: colors.brand.gold, textAlign: "center", marginTop: 4, textDecorationLine: "underline" },

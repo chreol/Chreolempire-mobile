@@ -12,21 +12,26 @@ import { colors, radius } from "@/constants/theme";
 import { CONTACT } from "@/constants/services";
 
 // ── Assets locaux ──────────────────────────────────────────────
-const IMG_ORANGE = require("../../../assets/orange-money.png");
-const IMG_MTN    = require("../../../assets/MTN Mobile Money (MoMo) Payment .png");
+const IMG_ORANGE  = require("../../../assets/orange-money.png");
+const IMG_MTN     = require("../../../assets/MTN Mobile Money (MoMo) Payment .png");
+const IMG_CANAL   = require("../../../assets/Canal+ logo.png");
+const IMG_ENEO    = require("../../../assets/Eneo logo.jpg");
+const IMG_CAMWAT  = require("../../../assets/Camwater logo.jpg");
+const IMG_STAR    = require("../../../assets/StarTimes logo.png");
+const IMG_EXPRESS = require("../../../assets/Express Union logo.png");
+const IMG_YOOMEE  = require("../../../assets/Yoomee Money logo.jpg");
 
-// Logos manquants → placeholder coloré jusqu'à réception des fichiers
-const BILL_LOGOS: Record<string, ReturnType<typeof require> | null> = {
-  canal:     null, // envoyer canal-plus.png dans assets/
-  eneo:      null, // envoyer eneo.png dans assets/
-  camwater:  null, // envoyer camwater.png dans assets/
-  startimes: null, // envoyer startimes.png dans assets/
+const BILL_LOGOS: Record<string, ReturnType<typeof require>> = {
+  canal:     IMG_CANAL,
+  eneo:      IMG_ENEO,
+  camwater:  IMG_CAMWAT,
+  startimes: IMG_STAR,
 };
-const MOMO_LOGOS: Record<string, ReturnType<typeof require> | null> = {
+const MOMO_LOGOS: Record<string, ReturnType<typeof require>> = {
   orange:  IMG_ORANGE,
   mtn:     IMG_MTN,
-  express: null, // envoyer express-union.png dans assets/
-  yoomee:  null, // envoyer yoomee.png dans assets/
+  express: IMG_EXPRESS,
+  yoomee:  IMG_YOOMEE,
 };
 
 // ── Données ────────────────────────────────────────────────────
@@ -51,17 +56,8 @@ type NumType = "phone" | "decoder";
 const COMMISSION = 200;
 
 // ── Composant logo (image ou badge coloré) ─────────────────────
-function Logo({ src, color, name, size = 48 }: { src: ReturnType<typeof require> | null; color: string; name: string; size?: number }) {
-  if (src) {
-    return <Image source={src} style={{ width: size, height: size, borderRadius: 8 }} contentFit="contain" />;
-  }
-  return (
-    <View style={{ width: size, height: size, borderRadius: 10, backgroundColor: color + "22", borderWidth: 1.5, borderColor: color + "66", alignItems: "center", justifyContent: "center" }}>
-      <Text style={{ fontSize: 11, fontWeight: "900", color, textAlign: "center", paddingHorizontal: 2 }} numberOfLines={2}>
-        {name.toUpperCase()}
-      </Text>
-    </View>
-  );
+function Logo({ src, size = 48 }: { src: ReturnType<typeof require>; size?: number }) {
+  return <Image source={src} style={{ width: size, height: size, borderRadius: 8 }} contentFit="contain" />;
 }
 
 // ── Écran principal ────────────────────────────────────────────
@@ -196,7 +192,7 @@ export default function FacturesScreen() {
                         <Text style={styles.checkText}>✓</Text>
                       </View>
                     )}
-                    <Logo src={BILL_LOGOS[b.id]} color={b.color} name={b.name} size={52} />
+                    <Logo src={BILL_LOGOS[b.id]} size={52} />
                     <Text style={[styles.billName, selectedBill === b.id && { color: colors.text.primary }]}>{b.name}</Text>
                     <Text style={styles.billDesc}>{b.desc}</Text>
                   </TouchableOpacity>
@@ -355,7 +351,7 @@ export default function FacturesScreen() {
                     onPress={() => { setMomoFrom(momoFrom === op.id ? null : op.id); if (momoTo === op.id) setMomoTo(null); }}
                     activeOpacity={0.8}
                   >
-                    <Logo src={MOMO_LOGOS[op.id]} color={op.color} name={op.name} size={40} />
+                    <Logo src={MOMO_LOGOS[op.id]} size={40} />
                     <Text style={[styles.opName, momoFrom === op.id && { color: colors.text.primary }]}>{op.name}</Text>
                   </TouchableOpacity>
                 ))}
@@ -371,7 +367,7 @@ export default function FacturesScreen() {
                     onPress={() => setMomoTo(momoTo === op.id ? null : op.id)}
                     activeOpacity={0.8}
                   >
-                    <Logo src={MOMO_LOGOS[op.id]} color={op.color} name={op.name} size={40} />
+                    <Logo src={MOMO_LOGOS[op.id]} size={40} />
                     <Text style={[styles.opName, momoTo === op.id && { color: colors.text.primary }]}>{op.name}</Text>
                   </TouchableOpacity>
                 ))}
@@ -397,9 +393,9 @@ export default function FacturesScreen() {
               {momoFrom && momoTo && momoAmountNum > 0 && (
                 <MotiView from={{ opacity: 0 }} animate={{ opacity: 1 }} style={styles.momoSummary}>
                   <View style={styles.momoSummaryRow}>
-                    <Logo src={MOMO_LOGOS[momoFrom]} color={MOMO_OPERATORS.find(o => o.id === momoFrom)!.color} name={MOMO_OPERATORS.find(o => o.id === momoFrom)!.name} size={32} />
+                    <Logo src={MOMO_LOGOS[momoFrom]} size={32} />
                     <Text style={styles.momoArrow}>  →  </Text>
-                    <Logo src={MOMO_LOGOS[momoTo]} color={MOMO_OPERATORS.find(o => o.id === momoTo)!.color} name={MOMO_OPERATORS.find(o => o.id === momoTo)!.name} size={32} />
+                    <Logo src={MOMO_LOGOS[momoTo]} size={32} />
                   </View>
                   <Text style={styles.momoSummaryAmount}>{momoAmountNum.toLocaleString("fr-FR")} FCFA → {momoAmountNum.toLocaleString("fr-FR")} FCFA</Text>
                   <Text style={styles.momoComm}>Commission : 0 FCFA ✅</Text>

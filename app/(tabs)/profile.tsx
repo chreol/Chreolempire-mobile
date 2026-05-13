@@ -8,6 +8,8 @@ import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import { Image } from "expo-image";
+
+const IC_TG = require("../../assets/telegram.png");
 import { MotiView } from "moti";
 import { colors, radius } from "@/constants/theme";
 import { CONTACT } from "@/constants/services";
@@ -75,7 +77,7 @@ export default function ProfileScreen() {
       onPress: () => Linking.openURL(`https://wa.me/${CONTACT.whatsapp}`),
     },
     {
-      id: "telegram", emoji: "✈️", label: "Telegram",
+      id: "telegram", emoji: "", image: IC_TG, label: "Telegram",
       subtitle: CONTACT.telegramHandle, color: "#0088CC",
       onPress: () => Linking.openURL(CONTACT.telegram),
     },
@@ -194,7 +196,9 @@ export default function ProfileScreen() {
             >
               <TouchableOpacity style={styles.menuItem} activeOpacity={0.8} onPress={item.onPress}>
                 <View style={[styles.menuIcon, { backgroundColor: item.color + "22" }]}>
-                  <Text style={styles.menuEmoji}>{item.emoji}</Text>
+                  {(item as any).image
+                    ? <Image source={(item as any).image} style={styles.menuImg} contentFit="contain" />
+                    : <Text style={styles.menuEmoji}>{item.emoji}</Text>}
                 </View>
                 <View style={styles.menuText}>
                   <Text style={styles.menuLabel}>{item.label}</Text>
@@ -314,6 +318,7 @@ const styles = StyleSheet.create({
   },
   menuIcon: { width: 42, height: 42, borderRadius: 13, alignItems: "center", justifyContent: "center" },
   menuEmoji: { fontSize: 20 },
+  menuImg: { width: 24, height: 24, borderRadius: 4 },
   menuText: { flex: 1 },
   menuLabel: { fontSize: 15, fontWeight: "600", color: colors.text.primary },
   menuSubtitle: { fontSize: 12, color: colors.text.secondary, marginTop: 2 },
