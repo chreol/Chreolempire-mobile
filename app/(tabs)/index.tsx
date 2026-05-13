@@ -12,8 +12,7 @@ import { colors, radius } from "@/constants/theme";
 import RateTicker from "@/components/RateTicker";
 import PromoBanner from "@/components/PromoBanner";
 import { CONTACT } from "@/constants/services";
-import { useAuth } from "@/hooks/useAuth";
-import { useOrders } from "@/hooks/useOrders";
+import { useHistory } from "@/contexts/HistoryContext";
 
 const { width } = Dimensions.get("window");
 const CARD_W = (width - 44) / 2;
@@ -36,8 +35,7 @@ const IC_EMAIL     = require("../../assets/email.png");
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { user } = useAuth();
-  const { orders } = useOrders(user?.uid);
+  const { history } = useHistory();
 
   const [contactOpen, setContactOpen] = useState(false);
   const [pseudo, setPseudo] = useState("");
@@ -82,9 +80,9 @@ export default function HomeScreen() {
           {/* Panier */}
           <TouchableOpacity style={styles.cartBtn} onPress={() => router.push("/(tabs)/orders")} activeOpacity={0.85}>
             <Text style={styles.cartEmoji}>🛒</Text>
-            {orders.length > 0 && (
+            {history.length > 0 && (
               <View style={styles.cartBadge}>
-                <Text style={styles.cartBadgeText}>{orders.length > 9 ? "9+" : orders.length}</Text>
+                <Text style={styles.cartBadgeText}>{history.length > 9 ? "9+" : history.length}</Text>
               </View>
             )}
           </TouchableOpacity>
@@ -285,11 +283,11 @@ export default function HomeScreen() {
       </TouchableOpacity>
 
       {/* ── FAB Panier (invisible si vide) ── */}
-      {orders.length > 0 && (
+      {history.length > 0 && (
         <TouchableOpacity style={styles.fabCart} onPress={() => router.push("/(tabs)/orders")} activeOpacity={0.85}>
           <Text style={styles.fabCartEmoji}>🛒</Text>
           <View style={styles.fabCartBadge}>
-            <Text style={styles.fabCartBadgeTxt}>{orders.length}</Text>
+            <Text style={styles.fabCartBadgeTxt}>{history.length}</Text>
           </View>
         </TouchableOpacity>
       )}
