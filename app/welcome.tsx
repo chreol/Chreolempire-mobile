@@ -62,6 +62,7 @@ export default function WelcomeScreen() {
       email: email.trim().toLowerCase(),
       city: finalCity.trim(),
       birthMonth,
+      photoUri: null,
     });
     router.replace("/(tabs)");
   };
@@ -170,7 +171,7 @@ export default function WelcomeScreen() {
             <MotiView from={{ opacity: 0, translateX: 40 }} animate={{ opacity: 1, translateX: 0 }} transition={{ type: "timing", duration: 320 }}>
               <Text style={styles.stepTitle}>Votre mois{"\n"}de naissance 🎂</Text>
               <Text style={styles.stepSub}>
-                Recevez un tampon bonus le mois de votre anniversaire — un cadeau de Chreol Empire rien que pour vous !
+                Recevez un tampon bonus le mois de votre anniversaire — un cadeau de Chreol Empire rien que pour vous 🥰!
               </Text>
 
               <View style={styles.monthGrid}>
