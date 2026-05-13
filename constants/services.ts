@@ -10,6 +10,7 @@ export const CONTACT = {
   telegram: "https://t.me/chreolempireBot",
   website: "https://chreolempire.com",
   paypalEmail: "LARAMBAMBO@GMAIL.COM",
+  googleMaps: "https://www.google.com/maps/search/Chreol+Empire+Deido+Douala+Cameroun",
 };
 
 export const IMAGES = {

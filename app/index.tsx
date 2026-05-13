@@ -4,30 +4,30 @@ import { useRouter } from "expo-router";
 import { Image } from "expo-image";
 import { MotiView } from "moti";
 import { colors } from "@/constants/theme";
+import { useProfile } from "@/contexts/ProfileContext";
 
 const LOGO = require("../assets/chreolempire logo avec contact m.png");
 
 export default function SplashIndex() {
   const router = useRouter();
+  const { profile, isLoading } = useProfile();
 
   useEffect(() => {
+    if (isLoading) return;
     const t = setTimeout(() => {
-      router.replace("/(tabs)");
-    }, 2600);
+      router.replace(profile.hasProfile ? "/(tabs)" : "/welcome");
+    }, 2200);
     return () => clearTimeout(t);
-  }, []);
+  }, [isLoading, profile.hasProfile]);
 
   return (
     <View style={styles.container}>
-      {/* Gold glow */}
       <MotiView
         from={{ opacity: 0, scale: 0.4 }}
-        animate={{ opacity: 0.18, scale: 2.5 }}
+        animate={{ opacity: 0.15, scale: 2.5 }}
         transition={{ type: "timing", duration: 1800 }}
         style={styles.glow}
       />
-
-      {/* Logo */}
       <MotiView
         from={{ opacity: 0, scale: 0.6 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -36,26 +36,22 @@ export default function SplashIndex() {
       >
         <Image source={LOGO} style={styles.logo} contentFit="contain" />
       </MotiView>
-
-      {/* Name */}
       <MotiView
         from={{ opacity: 0, translateY: 20 }}
         animate={{ opacity: 1, translateY: 0 }}
-        transition={{ type: "timing", duration: 500, delay: 600 }}
+        transition={{ type: "timing", duration: 500, delay: 500 }}
         style={styles.nameWrap}
       >
         <Text style={styles.name}>Chreol Empire</Text>
         <Text style={styles.tagline}>Le Premium des Services Digitaux 🇨🇲</Text>
       </MotiView>
-
-      {/* Dots */}
       <MotiView
         from={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 1200 }}
+        transition={{ delay: 1100 }}
         style={styles.dots}
       >
-        {[0, 1, 2].map((i) => (
+        {[0, 1, 2].map(i => (
           <MotiView
             key={i}
             from={{ scale: 0.4, opacity: 0.2 }}

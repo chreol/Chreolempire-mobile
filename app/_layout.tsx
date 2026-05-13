@@ -6,6 +6,7 @@ import * as SplashScreen from "expo-splash-screen";
 import { CartProvider } from "@/contexts/CartContext";
 import { HistoryProvider } from "@/contexts/HistoryContext";
 import { LoyaltyProvider } from "@/contexts/LoyaltyContext";
+import { ProfileProvider } from "@/contexts/ProfileContext";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import FloatingWaBot from "@/components/FloatingWaBot";
 
@@ -20,6 +21,7 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
+      <ProfileProvider>
       <LoyaltyProvider>
       <HistoryProvider>
       <CartProvider>
@@ -27,6 +29,7 @@ export default function RootLayout() {
         <StatusBar style="light" backgroundColor="#0A0B0F" />
         <Stack screenOptions={{ headerShown: false, animation: "fade" }}>
           <Stack.Screen name="index" />
+          <Stack.Screen name="welcome" options={{ animation: "slide_from_bottom" }} />
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="cart" options={{ animation: "slide_from_bottom", presentation: "modal" }} />
           <Stack.Screen name="services/cartes-cadeaux" options={{ animation: "slide_from_right" }} />
@@ -40,6 +43,7 @@ export default function RootLayout() {
       </CartProvider>
       </HistoryProvider>
       </LoyaltyProvider>
+      </ProfileProvider>
     </GestureHandlerRootView>
   );
 }

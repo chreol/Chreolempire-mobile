@@ -1,153 +1,212 @@
-import { View, Text, StyleSheet, TouchableOpacity, Alert, Linking, ScrollView } from "react-native";
-import { Image } from "expo-image";
+import { useState } from "react";
+import {
+  View, Text, StyleSheet, TouchableOpacity, Alert,
+  Linking, ScrollView, Modal, TextInput,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { MotiView } from "moti";
-import { useAuth } from "@/hooks/useAuth";
-import { useOrders } from "@/hooks/useOrders";
 import { colors, radius } from "@/constants/theme";
 import { CONTACT } from "@/constants/services";
 import LoyaltyCard from "@/components/LoyaltyCard";
 import { useHistory } from "@/contexts/HistoryContext";
+import { useProfile } from "@/contexts/ProfileContext";
+import { useLoyalty } from "@/contexts/LoyaltyContext";
 
-const DEMO_MODE = process.env.EXPO_PUBLIC_DEMO_MODE === "true";
-
-const menuItems = [
-  { id: "support", emoji: "💬", label: "Support WhatsApp", subtitle: "Répond en moins de 5 min", color: "#25D366", action: "whatsapp" },
-  { id: "telegram", emoji: "✈️", label: "Telegram Bot", subtitle: "Commandes automatisées", color: "#0088CC", action: "telegram" },
-  { id: "terms", emoji: "📄", label: "Conditions d'utilisation", subtitle: "CGU et politique de confidentialité", color: colors.text.muted, action: null },
+const MONTHS = [
+  "Jan", "Fév", "Mar", "Avr", "Mai", "Juin",
+  "Juil", "Août", "Sep", "Oct", "Nov", "Déc",
 ];
 
 export default function ProfileScreen() {
-  const { user } = useAuth();
-  const { orders } = useOrders(user?.uid);
-  const { history } = useHistory();
   const router = useRouter();
+  const { profile, updateEmail } = useProfile();
+  const { history } = useHistory();
+  const { stamps } = useLoyalty();
 
-  const deliveredCount = orders.filter((o) => o.status === "delivered").length;
-  const totalSpent = orders
-    .filter((o) => o.status !== "failed")
-    .reduce((acc, o) => acc + o.amount_fcfa, 0);
+  const [emailModal, setEmailModal] = useState(false);
+  const [emailInput, setEmailInput] = useState(profile.email);
 
-  const handleSignOut = async () => {
-    Alert.alert("Déconnexion", "Êtes-vous sûr de vouloir vous déconnecter ?", [
-      { text: "Annuler", style: "cancel" },
-      {
-        text: "Déconnexion", style: "destructive",
-        onPress: async () => {
-          await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-          if (!DEMO_MODE) {
-            const { signOut } = await import("firebase/auth");
-            const { auth } = await import("@/lib/firebase");
-            await signOut(auth);
-          }
-          router.replace("/auth");
-        },
-      },
-    ]);
+  const totalFcfa = history.reduce((sum, o) => sum + (o.total ?? 0), 0);
+
+  const initials = profile.name
+    ? profile.name.trim().split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2)
+    : "👑";
+
+  const currentMonth = new Date().getMonth() + 1;
+  const isBirthMonth = profile.birthMonth === currentMonth;
+
+  const handleSaveEmail = async () => {
+    const val = emailInput.trim().toLowerCase();
+    if (val && !val.includes("@")) {
+      Alert.alert("Email invalide", "Veuillez entrer une adresse email valide.");
+      return;
+    }
+    await updateEmail(val);
+    setEmailModal(false);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
-  const handleMenuPress = (action: string | null) => {
-    if (action === "whatsapp") Linking.openURL(`https://wa.me/${CONTACT.whatsapp}`);
-    else if (action === "telegram") Linking.openURL(CONTACT.telegram);
-    else Haptics.selectionAsync();
-  };
+  const menuItems = [
+    {
+      id: "whatsapp", emoji: "💬", label: "Support WhatsApp",
+      subtitle: "Répond en moins de 5 min", color: "#25D366",
+      onPress: () => Linking.openURL(`https://wa.me/${CONTACT.whatsapp}`),
+    },
+    {
+      id: "telegram", emoji: "✈️", label: "Telegram",
+      subtitle: "@chreolempireBot", color: "#0088CC",
+      onPress: () => Linking.openURL(CONTACT.telegram),
+    },
+    {
+      id: "googlemaps", emoji: "⭐", label: "Laisser un avis Google",
+      subtitle: "Partagez votre expérience", color: "#FACC15",
+      onPress: () => Linking.openURL(CONTACT.googleMaps),
+    },
+    {
+      id: "edit", emoji: "✏️", label: "Modifier mon profil",
+      subtitle: "Nom, ville, email, anniversaire", color: colors.brand.gold,
+      onPress: () => router.push("/welcome"),
+    },
+    {
+      id: "terms", emoji: "📄", label: "Conditions d'utilisation",
+      subtitle: "CGU et politique de confidentialité", color: colors.text.muted,
+      onPress: () => Linking.openURL(CONTACT.website),
+    },
+  ];
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
         <Text style={styles.title}>Mon Profil</Text>
       </View>
+
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
 
-      {/* User card */}
-      <MotiView
-        from={{ opacity: 0, translateY: -10 }}
-        animate={{ opacity: 1, translateY: 0 }}
-        transition={{ type: "timing", duration: 500 }}
-        style={styles.userCard}
-      >
-        <View style={styles.avatarSection}>
-          {user?.photoURL ? (
-            <Image source={{ uri: user.photoURL }} style={styles.avatar} contentFit="cover" />
-          ) : (
-            <View style={styles.avatarFallback}>
-              <Text style={styles.avatarLetter}>
-                {(user?.displayName ?? "U")[0].toUpperCase()}
-              </Text>
-            </View>
-          )}
-          <View>
-            <Text style={styles.userName}>{user?.displayName ?? "Utilisateur"}</Text>
-            <Text style={styles.userEmail}>{user?.email}</Text>
-            <View style={styles.verifiedBadge}>
-              <Text style={styles.verifiedText}>✓ Google vérifié</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Stats */}
-        <View style={styles.statsRow}>
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>{history.length}</Text>
-            <Text style={styles.statLabel}>Envois WA</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statValue}>{deliveredCount}</Text>
-            <Text style={styles.statLabel}>Livrées</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={[styles.statValue, { color: colors.brand.gold }]}>
-              {totalSpent.toLocaleString()}
-            </Text>
-            <Text style={styles.statLabel}>FCFA dépensés</Text>
-          </View>
-        </View>
-      </MotiView>
-
-      {/* Loyalty Card */}
-      <View style={styles.loyaltyWrap}>
-        <LoyaltyCard />
-      </View>
-
-      {/* Menu items */}
-      <View style={styles.menuSection}>
-        {menuItems.map((item, i) => (
+        {/* Bannière anniversaire */}
+        {isBirthMonth && (
           <MotiView
-            key={item.id}
-            from={{ opacity: 0, translateX: -16 }}
-            animate={{ opacity: 1, translateX: 0 }}
-            transition={{ delay: 150 + i * 80, type: "timing", duration: 350 }}
+            from={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ type: "spring", damping: 14 }}
+            style={styles.birthdayBanner}
           >
-            <TouchableOpacity
-              style={styles.menuItem}
-              activeOpacity={0.8}
-              onPress={() => handleMenuPress(item.action)}
-            >
-              <View style={[styles.menuIcon, { backgroundColor: item.color + "22" }]}>
-                <Text style={styles.menuEmoji}>{item.emoji}</Text>
-              </View>
-              <View style={styles.menuText}>
-                <Text style={styles.menuLabel}>{item.label}</Text>
-                <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
-              </View>
-              <Text style={styles.menuArrow}>›</Text>
-            </TouchableOpacity>
+            <Text style={styles.birthdayText}>🎂 Bon anniversaire {profile.name} ! Votre tampon bonus ce mois-ci est activé.</Text>
           </MotiView>
-        ))}
-      </View>
+        )}
 
-      {/* Sign out */}
-      <TouchableOpacity onPress={handleSignOut} style={styles.signOutButton} activeOpacity={0.8}>
-        <Text style={styles.signOutText}>🚪 Se déconnecter</Text>
-      </TouchableOpacity>
+        {/* Carte profil */}
+        <MotiView
+          from={{ opacity: 0, translateY: -10 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: "timing", duration: 500 }}
+          style={styles.userCard}
+        >
+          <View style={styles.avatarSection}>
+            <View style={styles.avatarFallback}>
+              <Text style={styles.avatarLetter}>{initials}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.userName}>{profile.name || "Membre Chreol Empire"}</Text>
+              <Text style={styles.userCity}>{profile.city ? `📍 ${profile.city}` : ""}</Text>
+              {profile.email ? (
+                <TouchableOpacity onPress={() => { setEmailInput(profile.email); setEmailModal(true); }}>
+                  <Text style={styles.userEmail}>{profile.email} ✏️</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity onPress={() => { setEmailInput(""); setEmailModal(true); }} style={styles.addEmailBtn}>
+                  <Text style={styles.addEmailText}>+ Ajouter un email</Text>
+                </TouchableOpacity>
+              )}
+              {profile.birthMonth && (
+                <Text style={styles.userBirth}>🎂 {MONTHS[profile.birthMonth - 1]}</Text>
+              )}
+            </View>
+            <View style={styles.vipBadge}>
+              <Text style={styles.vipText}>👑 VIP</Text>
+            </View>
+          </View>
 
-      {/* App version */}
-      <Text style={styles.version}>Chreol Empire v1.0.0 · 🇨🇲</Text>
+          {/* Stats */}
+          <View style={styles.statsRow}>
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>{history.length}</Text>
+              <Text style={styles.statLabel}>Commandes</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>{stamps}</Text>
+              <Text style={styles.statLabel}>Tampons</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={[styles.statValue, { color: colors.brand.gold }]}>
+                {totalFcfa > 0 ? (totalFcfa / 1000).toFixed(0) + "k" : "0"}
+              </Text>
+              <Text style={styles.statLabel}>FCFA total</Text>
+            </View>
+          </View>
+        </MotiView>
+
+        {/* Carte fidélité */}
+        <View style={styles.loyaltyWrap}>
+          <LoyaltyCard />
+        </View>
+
+        {/* Menu */}
+        <View style={styles.menuSection}>
+          {menuItems.map((item, i) => (
+            <MotiView
+              key={item.id}
+              from={{ opacity: 0, translateX: -16 }}
+              animate={{ opacity: 1, translateX: 0 }}
+              transition={{ delay: 100 + i * 70, type: "timing", duration: 320 }}
+            >
+              <TouchableOpacity style={styles.menuItem} activeOpacity={0.8} onPress={item.onPress}>
+                <View style={[styles.menuIcon, { backgroundColor: item.color + "22" }]}>
+                  <Text style={styles.menuEmoji}>{item.emoji}</Text>
+                </View>
+                <View style={styles.menuText}>
+                  <Text style={styles.menuLabel}>{item.label}</Text>
+                  <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
+                </View>
+                <Text style={styles.menuArrow}>›</Text>
+              </TouchableOpacity>
+            </MotiView>
+          ))}
+        </View>
+
+        <Text style={styles.version}>Chreol Empire v1.0.0 · 🇨🇲 Douala</Text>
       </ScrollView>
+
+      {/* Modal email */}
+      <Modal visible={emailModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>📧 Votre adresse email</Text>
+            <Text style={styles.modalSub}>Pour recevoir vos confirmations et offres exclusives.</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={emailInput}
+              onChangeText={setEmailInput}
+              placeholder="exemple@gmail.com"
+              placeholderTextColor={colors.text.muted}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoFocus
+            />
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.modalCancel} onPress={() => setEmailModal(false)}>
+                <Text style={styles.modalCancelText}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.modalSave} onPress={handleSaveEmail}>
+                <Text style={styles.modalSaveText}>Enregistrer</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -156,6 +215,15 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg.primary },
   header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 16 },
   title: { fontSize: 24, fontWeight: "800", color: colors.text.primary, letterSpacing: -0.4 },
+
+  birthdayBanner: {
+    marginHorizontal: 16, marginBottom: 12,
+    backgroundColor: "#C9A84C22", borderRadius: radius.xl,
+    borderWidth: 1.5, borderColor: colors.brand.gold + "66",
+    padding: 14,
+  },
+  birthdayText: { fontSize: 13, color: colors.brand.goldDark, fontWeight: "700", textAlign: "center" },
+
   userCard: {
     marginHorizontal: 16,
     backgroundColor: colors.bg.card,
@@ -164,24 +232,27 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border.default,
     gap: 20,
   },
-  avatarSection: { flexDirection: "row", alignItems: "center", gap: 16 },
-  avatar: { width: 64, height: 64, borderRadius: 32 },
+  avatarSection: { flexDirection: "row", alignItems: "flex-start", gap: 14 },
   avatarFallback: {
-    width: 64, height: 64, borderRadius: 32,
+    width: 60, height: 60, borderRadius: 30,
     backgroundColor: colors.brand.gold,
     alignItems: "center", justifyContent: "center",
+    flexShrink: 0,
   },
-  avatarLetter: { fontSize: 26, fontWeight: "800", color: "#fff" },
-  userName: { fontSize: 18, fontWeight: "800", color: colors.text.primary, letterSpacing: -0.3 },
-  userEmail: { fontSize: 13, color: colors.text.secondary, marginTop: 2 },
-  verifiedBadge: {
-    marginTop: 6,
-    backgroundColor: colors.accent.green + "22",
-    borderRadius: radius.full,
-    paddingHorizontal: 8, paddingVertical: 3,
-    alignSelf: "flex-start",
+  avatarLetter: { fontSize: 22, fontWeight: "800", color: "#0A0A0A" },
+  userName: { fontSize: 17, fontWeight: "800", color: colors.text.primary, letterSpacing: -0.3 },
+  userCity: { fontSize: 12, color: colors.text.muted, marginTop: 2 },
+  userEmail: { fontSize: 12, color: colors.brand.gold, marginTop: 4 },
+  userBirth: { fontSize: 11, color: colors.text.muted, marginTop: 3 },
+  addEmailBtn: { marginTop: 6, alignSelf: "flex-start" },
+  addEmailText: { fontSize: 12, color: colors.brand.gold, fontWeight: "700" },
+  vipBadge: {
+    backgroundColor: colors.brand.goldLight,
+    borderRadius: radius.full, borderWidth: 1, borderColor: colors.brand.gold + "55",
+    paddingHorizontal: 10, paddingVertical: 4,
   },
-  verifiedText: { color: colors.accent.green, fontSize: 11, fontWeight: "700" },
+  vipText: { fontSize: 11, fontWeight: "800", color: colors.brand.gold },
+
   statsRow: {
     flexDirection: "row",
     backgroundColor: colors.bg.elevated,
@@ -192,7 +263,9 @@ const styles = StyleSheet.create({
   statValue: { fontSize: 20, fontWeight: "800", color: colors.text.primary },
   statLabel: { fontSize: 11, color: colors.text.muted, marginTop: 3 },
   statDivider: { width: 1, height: 32, backgroundColor: colors.border.default },
+
   loyaltyWrap: { marginHorizontal: 16, marginTop: 16 },
+
   menuSection: { padding: 16, gap: 8 },
   menuItem: {
     flexDirection: "row", alignItems: "center",
@@ -201,22 +274,41 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border.default,
     gap: 12,
   },
-  menuIcon: {
-    width: 40, height: 40, borderRadius: 12,
-    alignItems: "center", justifyContent: "center",
-  },
+  menuIcon: { width: 42, height: 42, borderRadius: 13, alignItems: "center", justifyContent: "center" },
   menuEmoji: { fontSize: 20 },
   menuText: { flex: 1 },
   menuLabel: { fontSize: 15, fontWeight: "600", color: colors.text.primary },
   menuSubtitle: { fontSize: 12, color: colors.text.secondary, marginTop: 2 },
   menuArrow: { fontSize: 20, color: colors.text.muted },
-  signOutButton: {
-    margin: 16, marginTop: 4,
-    backgroundColor: "#EF444422",
-    borderRadius: radius.xl, padding: 16,
-    alignItems: "center",
-    borderWidth: 1, borderColor: "#EF444433",
-  },
-  signOutText: { color: "#EF4444", fontSize: 15, fontWeight: "700" },
+
   version: { textAlign: "center", color: colors.text.muted, fontSize: 12, paddingBottom: 20 },
+
+  modalOverlay: {
+    flex: 1, backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "flex-end",
+  },
+  modalCard: {
+    backgroundColor: colors.bg.card,
+    borderTopLeftRadius: radius["2xl"], borderTopRightRadius: radius["2xl"],
+    padding: 24, gap: 14,
+  },
+  modalTitle: { fontSize: 18, fontWeight: "800", color: colors.text.primary },
+  modalSub: { fontSize: 13, color: colors.text.secondary },
+  modalInput: {
+    backgroundColor: colors.bg.elevated, borderRadius: radius.lg,
+    borderWidth: 1.5, borderColor: colors.border.strong,
+    paddingHorizontal: 16, paddingVertical: 14,
+    fontSize: 16, color: colors.text.primary,
+  },
+  modalActions: { flexDirection: "row", gap: 12 },
+  modalCancel: {
+    flex: 1, borderRadius: radius.full, borderWidth: 1.5,
+    borderColor: colors.border.default, paddingVertical: 14, alignItems: "center",
+  },
+  modalCancelText: { fontSize: 15, fontWeight: "700", color: colors.text.secondary },
+  modalSave: {
+    flex: 2, backgroundColor: colors.brand.gold,
+    borderRadius: radius.full, paddingVertical: 14, alignItems: "center",
+  },
+  modalSaveText: { fontSize: 15, fontWeight: "900", color: "#0A0A0A" },
 });

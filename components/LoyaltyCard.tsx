@@ -1,8 +1,10 @@
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Alert, Linking, Share } from "react-native";
 import * as Haptics from "expo-haptics";
+import * as StoreReview from "expo-store-review";
 import { MotiView } from "moti";
 import { useLoyalty, STAMPS_FOR_REWARD } from "@/contexts/LoyaltyContext";
 import { colors, radius } from "@/constants/theme";
+import { CONTACT } from "@/constants/services";
 
 const STAMP_ICONS = ["🎮", "💵", "🎟️", "₿", "🎁", "💶", "🎯", "⚡", "🌟", "👑"];
 
@@ -30,7 +32,7 @@ export default function LoyaltyCard() {
     if (!canRedeem) return;
     Alert.alert(
       "🎁 Récompense disponible !",
-      "Présentez cette notification à notre équipe WhatsApp pour bénéficier de votre avantage fidélité.\n\nContactez-nous pour réclamer votre récompense.",
+      "Présentez cette notification à notre équipe WhatsApp pour bénéficier de votre avantage fidélité.",
       [
         { text: "Plus tard", style: "cancel" },
         {
@@ -38,6 +40,29 @@ export default function LoyaltyCard() {
           onPress: async () => {
             await redeemReward();
             await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            const msg = `Bonjour Chreol Empire 👑\n\nJe souhaite réclamer ma récompense de fidélité !\n🎁 Carte complète — ${Math.floor(stamps / STAMPS_FOR_REWARD)} carte(s) VIP complétée(s).`;
+            Linking.openURL(`https://wa.me/${CONTACT.whatsapp}?text=${encodeURIComponent(msg)}`);
+            // Demande d'avis après récompense — pic de satisfaction
+            const canAsk = await StoreReview.hasAction();
+            if (canAsk) {
+              setTimeout(() => StoreReview.requestReview(), 1500);
+            }
+            // Partage WhatsApp Status
+            setTimeout(() => {
+              Alert.alert(
+                "Partagez votre succès 🏆",
+                "Invitez vos amis à rejoindre Chreol Empire et gagnez des tampons bonus !",
+                [
+                  { text: "Non merci", style: "cancel" },
+                  {
+                    text: "Partager",
+                    onPress: () => Share.share({
+                      message: "J'ai obtenu ma récompense VIP chez Chreol Empire 👑🇨🇲 — le meilleur service pour les cartes cadeaux, crypto et coupons à Douala ! Rejoins-les : https://chreolempire.com",
+                    }),
+                  },
+                ]
+              );
+            }, 3000);
           },
         },
       ]

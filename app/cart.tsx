@@ -14,6 +14,7 @@ import { useCart, CartItem } from "@/contexts/CartContext";
 import { useHistory, OrderType } from "@/contexts/HistoryContext";
 import { useLoyalty } from "@/contexts/LoyaltyContext";
 import { scheduleOrderNotification } from "@/hooks/usePushNotifications";
+import * as StoreReview from "expo-store-review";
 
 const IMG_NEERO = require("../assets/Neero paiement @blondelccde.png");
 
@@ -344,6 +345,13 @@ export default function CartScreen() {
     scheduleOrderNotification("submitted", summary);
     if (!allCoupons) addStamp();
     clearCart();
+
+    // Demande d'avis natif à la 3e et 10e commande
+    const historyLen = history.length + 1;
+    if (historyLen === 3 || historyLen === 10) {
+      const canAsk = await StoreReview.hasAction();
+      if (canAsk) setTimeout(() => StoreReview.requestReview(), 2000);
+    }
   };
 
   const confirmClear = () => Alert.alert(
