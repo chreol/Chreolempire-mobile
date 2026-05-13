@@ -67,7 +67,7 @@ export default function HomeScreen() {
           <View>
             <Text style={styles.headerTitle}>Chreol Empire</Text>
             <Text style={styles.headerSlogan} numberOfLines={1}>
-              L'Autorité des Services Digitaux 🇨🇲
+              L'Autorité des Services Digitaux au 🇨🇲
             </Text>
           </View>
         </View>

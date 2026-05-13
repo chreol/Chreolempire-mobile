@@ -6,37 +6,31 @@ import Animated, {
 } from "react-native-reanimated";
 import { colors } from "@/constants/theme";
 
-const RATES = [
-  { label: "USDT",      buy: "700 FCFA/$",  sell: "580 FCFA/$" },
-  { label: "BTC",       buy: "70M FCFA",    sell: "58M FCFA" },
-  { label: "TRX",       buy: "182 FCFA",    sell: "151 FCFA" },
-  { label: "PayPal",    buy: "700 FCFA/€",  sell: "580 FCFA/€" },
-  { label: "PCS",       buy: "—",           sell: "440 FCFA/€" },
-  { label: "Transcash", buy: "—",           sell: "440 FCFA/€" },
-  { label: "USDC",      buy: "700 FCFA/$",  sell: "580 FCFA/$" },
-  { label: "SOL",       buy: "Sur demande", sell: "Sur demande" },
-];
-
-const TICKER_TEXT = RATES.map(r =>
-  `${r.label}  ▸  Achat ${r.buy}  •  Vente ${r.sell}`
-).join("     ◆     ") + "     ◆     ";
+const TICKER_TEXT =
+  "USDT  ▸  Achat 700 FCFA/$  •  Vente 580 FCFA/$     ◆     " +
+  "BTC  ▸  Achat 70M FCFA  •  Vente 58M FCFA     ◆     " +
+  "TRX  ▸  Achat 182 FCFA  •  Vente 151 FCFA     ◆     " +
+  "PayPal  ▸  Achat 700 FCFA/€  •  Vente 580 FCFA/€     ◆     " +
+  "PCS  ▸  Vente 440 FCFA/€     ◆     " +
+  "Transcash  ▸  Vente 440 FCFA/€     ◆     " +
+  "USDC  ▸  Achat 700 FCFA/$  •  Vente 580 FCFA/$     ◆     " +
+  "SOL  ▸  Sur demande     ◆     ";
 
 export default function RateTicker() {
   const translateX = useSharedValue(0);
-  const measured = useRef(false);
+  const started = useRef(false);
 
-  const startAnim = useCallback((oneWidth: number) => {
-    if (oneWidth <= 0 || measured.current) return;
-    measured.current = true;
-    translateX.value = 0;
-    translateX.value = withRepeat(
-      withTiming(-oneWidth, {
-        duration: oneWidth * 18, // ~18 ms per px → vitesse constante
-        easing: Easing.linear,
-      }),
-      -1,
-      false
-    );
+  // Le ghost mesure la vraie largeur du texte sans contrainte de parent
+  const onGhostLayout = useCallback((e: { nativeEvent: { layout: { width: number } } }) => {
+    const w = e.nativeEvent.layout.width;
+    if (w > 0 && !started.current) {
+      started.current = true;
+      translateX.value = withRepeat(
+        withTiming(-w, { duration: w * 20, easing: Easing.linear }),
+        -1,
+        false
+      );
+    }
   }, []);
 
   const animStyle = useAnimatedStyle(() => ({
@@ -45,24 +39,31 @@ export default function RateTicker() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.track}>
+
+      {/* Ghost invisible — mesure la largeur naturelle sans contrainte */}
+      <View style={styles.ghost} pointerEvents="none">
+        <Text style={styles.ticker} onLayout={onGhostLayout}>{TICKER_TEXT}</Text>
+      </View>
+
+      {/* Ticker visible */}
+      <View style={styles.livePart}>
         <View style={styles.liveDot} />
         <Text style={styles.liveLabel}>LIVE</Text>
         <View style={styles.sep} />
-        <View style={styles.clip}>
-          {/* Deux copies côte à côte — la 1ère mesurée pour connaître la vraie largeur */}
-          <Animated.View style={[styles.row, animStyle]}>
-            <Text
-              style={styles.ticker}
-              onLayout={e => startAnim(e.nativeEvent.layout.width)}
-            >
-              {TICKER_TEXT}
-            </Text>
-            {/* 2ème copie pour le défilement sans coupure */}
-            <Text style={styles.ticker}>{TICKER_TEXT}</Text>
-          </Animated.View>
-        </View>
       </View>
+
+      <View style={styles.clip}>
+        <Animated.View style={[styles.row, animStyle]}>
+          {/* 2 copies pour le loop seamless */}
+          <View style={styles.textWrap}>
+            <Text style={styles.ticker}>{TICKER_TEXT}</Text>
+          </View>
+          <View style={styles.textWrap}>
+            <Text style={styles.ticker}>{TICKER_TEXT}</Text>
+          </View>
+        </Animated.View>
+      </View>
+
     </View>
   );
 }
@@ -73,12 +74,25 @@ const styles = StyleSheet.create({
     backgroundColor: "#0F0F0F",
     borderBottomWidth: 1,
     borderBottomColor: colors.brand.gold + "33",
+    flexDirection: "row",
+    alignItems: "center",
+    overflow: "hidden",
   },
-  track: { flex: 1, flexDirection: "row", alignItems: "center" },
+  // Ghost hors écran, opacity 0, aucune contrainte de largeur
+  ghost: {
+    position: "absolute",
+    top: -200,
+    left: 0,
+    opacity: 0,
+  },
+  livePart: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexShrink: 0,
+  },
   liveDot: {
     width: 7, height: 7, borderRadius: 4,
     backgroundColor: "#10B981", marginLeft: 10,
-    shadowColor: "#10B981", shadowOpacity: 0.8, shadowRadius: 4,
   },
   liveLabel: {
     fontSize: 9, fontWeight: "900", color: "#10B981",
@@ -91,8 +105,10 @@ const styles = StyleSheet.create({
   },
   clip: { flex: 1, overflow: "hidden" },
   row: { flexDirection: "row" },
+  textWrap: { flexShrink: 0 },
   ticker: {
     fontSize: 11.5, fontWeight: "700",
     color: colors.brand.gold, letterSpacing: 0.3,
+    flexShrink: 0,
   },
 });
