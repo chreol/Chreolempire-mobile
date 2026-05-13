@@ -1,4 +1,3 @@
-import "../global.css";
 import { useEffect } from "react";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -28,8 +27,6 @@ export default function RootLayout() {
         <StatusBar style="light" backgroundColor="#0A0B0F" />
         <Stack screenOptions={{ headerShown: false, animation: "fade" }}>
           <Stack.Screen name="index" />
-          <Stack.Screen name="onboarding" />
-          <Stack.Screen name="auth" />
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="cart" options={{ animation: "slide_from_bottom", presentation: "modal" }} />
           <Stack.Screen

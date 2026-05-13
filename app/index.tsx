@@ -3,23 +3,19 @@ import { View, Text, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import { Image } from "expo-image";
 import { MotiView } from "moti";
-import { useAuth } from "@/hooks/useAuth";
 import { colors } from "@/constants/theme";
 
-const LOGO = require("../assets/Fond vide logo chreol empire.png");
+const LOGO = require("../assets/chreolempire logo avec contact m.png");
 
 export default function SplashIndex() {
   const router = useRouter();
-  const { user, loading } = useAuth();
 
   useEffect(() => {
-    if (!loading) {
-      const t = setTimeout(() => {
-        router.replace(user ? "/(tabs)" : "/onboarding");
-      }, 2600);
-      return () => clearTimeout(t);
-    }
-  }, [loading, user]);
+    const t = setTimeout(() => {
+      router.replace("/(tabs)");
+    }, 2600);
+    return () => clearTimeout(t);
+  }, []);
 
   return (
     <View style={styles.container}>
