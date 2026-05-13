@@ -32,10 +32,17 @@ type TabKey = (typeof TABS)[number]["key"];
 
 const REGIONS = [
   { code: "US", flag: "🇺🇸", label: "USA" },
-  { code: "EU", flag: "🇫🇷", label: "Europe" },
+  { code: "EU", flag: "🇪🇺", label: "Europe" },
+  { code: "FR", flag: "🇫🇷", label: "France" },
+  { code: "BE", flag: "🇧🇪", label: "Belgique" },
+  { code: "IT", flag: "🇮🇹", label: "Italie" },
+  { code: "DE", flag: "🇩🇪", label: "Allemagne" },
+  { code: "ES", flag: "🇪🇸", label: "Espagne"},
+  { code: "LU", flag: "🇱🇺", label: "Luxembourg"},
   { code: "UK", flag: "🇬🇧", label: "UK" },
   { code: "CA", flag: "🇨🇦", label: "Canada" },
   { code: "AU", flag: "🇦🇺", label: "Australie" },
+  { code: "GLOBAL", flag: "🌐", label: "Global"},
 ] as const;
 
 const CUSTOM_RATE = 750; // FCFA per currency unit
@@ -154,7 +161,7 @@ export default function CartesCadeauxScreen() {
           {activeTab === "standard" && (
             <View style={styles.infoBanner}>
               <Text style={styles.infoBannerText}>
-                PSN · Steam · Razer Gold · Roblox (€) · Nintendo eShop — même tarif
+                PSN · Steam · Razer Gold · Roblox · Nintendo eShop — même tarif
               </Text>
             </View>
           )}
