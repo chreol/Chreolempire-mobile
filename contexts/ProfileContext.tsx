@@ -9,16 +9,18 @@ export interface Profile {
   city: string;
   birthMonth: number | null; // 1-12
   hasProfile: boolean;
+  photoUri: string | null;
 }
 
 const DEFAULT: Profile = {
-  name: "", email: "", city: "", birthMonth: null, hasProfile: false,
+  name: "", email: "", city: "", birthMonth: null, hasProfile: false, photoUri: null,
 };
 
 interface ProfileContextType {
   profile: Profile;
   saveProfile: (data: Omit<Profile, "hasProfile">) => Promise<void>;
   updateEmail: (email: string) => Promise<void>;
+  updatePhoto: (uri: string) => Promise<void>;
   isLoading: boolean;
 }
 
@@ -50,8 +52,12 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     await persist({ ...profile, email });
   };
 
+  const updatePhoto = async (uri: string) => {
+    await persist({ ...profile, photoUri: uri });
+  };
+
   return (
-    <ProfileContext.Provider value={{ profile, saveProfile, updateEmail, isLoading }}>
+    <ProfileContext.Provider value={{ profile, saveProfile, updateEmail, updatePhoto, isLoading }}>
       {children}
     </ProfileContext.Provider>
   );

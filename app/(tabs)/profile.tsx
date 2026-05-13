@@ -6,6 +6,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
+import * as ImagePicker from "expo-image-picker";
+import { Image } from "expo-image";
 import { MotiView } from "moti";
 import { colors, radius } from "@/constants/theme";
 import { CONTACT } from "@/constants/services";
@@ -21,7 +23,25 @@ const MONTHS = [
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { profile, updateEmail } = useProfile();
+  const { profile, updateEmail, updatePhoto } = useProfile();
+
+  const pickPhoto = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permission requise", "Autorisez l'accès à vos photos pour changer votre image de profil.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+    if (!result.canceled && result.assets[0]?.uri) {
+      await updatePhoto(result.assets[0].uri);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+  };
   const { history } = useHistory();
   const { stamps } = useLoyalty();
 
@@ -56,7 +76,7 @@ export default function ProfileScreen() {
     },
     {
       id: "telegram", emoji: "✈️", label: "Telegram",
-      subtitle: "@chreolempireBot", color: "#0088CC",
+      subtitle: CONTACT.telegramHandle, color: "#0088CC",
       onPress: () => Linking.openURL(CONTACT.telegram),
     },
     {
@@ -104,9 +124,18 @@ export default function ProfileScreen() {
           style={styles.userCard}
         >
           <View style={styles.avatarSection}>
-            <View style={styles.avatarFallback}>
-              <Text style={styles.avatarLetter}>{initials}</Text>
-            </View>
+            <TouchableOpacity onPress={pickPhoto} activeOpacity={0.85} style={styles.avatarWrap}>
+              {profile.photoUri ? (
+                <Image source={{ uri: profile.photoUri }} style={styles.avatarImg} contentFit="cover" />
+              ) : (
+                <View style={styles.avatarFallback}>
+                  <Text style={styles.avatarLetter}>{initials}</Text>
+                </View>
+              )}
+              <View style={styles.avatarCamera}>
+                <Text style={styles.avatarCameraIcon}>📷</Text>
+              </View>
+            </TouchableOpacity>
             <View style={{ flex: 1 }}>
               <Text style={styles.userName}>{profile.name || "Membre Chreol Empire"}</Text>
               <Text style={styles.userCity}>{profile.city ? `📍 ${profile.city}` : ""}</Text>
@@ -233,13 +262,22 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   avatarSection: { flexDirection: "row", alignItems: "flex-start", gap: 14 },
+  avatarWrap: { position: "relative", flexShrink: 0 },
+  avatarImg: { width: 60, height: 60, borderRadius: 30 },
   avatarFallback: {
     width: 60, height: 60, borderRadius: 30,
     backgroundColor: colors.brand.gold,
     alignItems: "center", justifyContent: "center",
-    flexShrink: 0,
   },
   avatarLetter: { fontSize: 22, fontWeight: "800", color: "#0A0A0A" },
+  avatarCamera: {
+    position: "absolute", bottom: -2, right: -2,
+    width: 22, height: 22, borderRadius: 11,
+    backgroundColor: colors.bg.elevated,
+    borderWidth: 1.5, borderColor: colors.brand.gold,
+    alignItems: "center", justifyContent: "center",
+  },
+  avatarCameraIcon: { fontSize: 11 },
   userName: { fontSize: 17, fontWeight: "800", color: colors.text.primary, letterSpacing: -0.3 },
   userCity: { fontSize: 12, color: colors.text.muted, marginTop: 2 },
   userEmail: { fontSize: 12, color: colors.brand.gold, marginTop: 4 },
