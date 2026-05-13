@@ -1,4 +1,4 @@
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useState } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import Animated, {
   useSharedValue, useAnimatedStyle,
@@ -19,12 +19,13 @@ const TICKER_TEXT =
 export default function RateTicker() {
   const translateX = useSharedValue(0);
   const started = useRef(false);
+  const [textWidth, setTextWidth] = useState(0);
 
-  // Le ghost mesure la vraie largeur du texte sans contrainte de parent
   const onGhostLayout = useCallback((e: { nativeEvent: { layout: { width: number } } }) => {
     const w = e.nativeEvent.layout.width;
     if (w > 0 && !started.current) {
       started.current = true;
+      setTextWidth(w);
       translateX.value = withRepeat(
         withTiming(-w, { duration: w * 20, easing: Easing.linear }),
         -1,
@@ -53,14 +54,13 @@ export default function RateTicker() {
       </View>
 
       <View style={styles.clip}>
-        <Animated.View style={[styles.row, animStyle]}>
-          {/* 2 copies pour le loop seamless */}
-          <View style={styles.textWrap}>
-            <Text style={styles.ticker}>{TICKER_TEXT}</Text>
-          </View>
-          <View style={styles.textWrap}>
-            <Text style={styles.ticker}>{TICKER_TEXT}</Text>
-          </View>
+        <Animated.View style={[styles.row, animStyle, textWidth > 0 && { width: textWidth * 2 }]}>
+          <Text style={[styles.ticker, textWidth > 0 && { width: textWidth }]} numberOfLines={1}>
+            {TICKER_TEXT}
+          </Text>
+          <Text style={[styles.ticker, textWidth > 0 && { width: textWidth }]} numberOfLines={1}>
+            {TICKER_TEXT}
+          </Text>
         </Animated.View>
       </View>
 
@@ -105,7 +105,6 @@ const styles = StyleSheet.create({
   },
   clip: { flex: 1, overflow: "hidden" },
   row: { flexDirection: "row" },
-  textWrap: { flexShrink: 0 },
   ticker: {
     fontSize: 11.5, fontWeight: "700",
     color: colors.brand.gold, letterSpacing: 0.3,
