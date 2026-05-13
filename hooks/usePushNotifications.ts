@@ -1,6 +1,10 @@
 import { useEffect, useRef } from "react";
 import * as Notifications from "expo-notifications";
+import Constants from "expo-constants";
 import { Platform } from "react-native";
+
+// Remote push tokens removed from Expo Go since SDK 53 — local notifications still work
+const isExpoGo = Constants.appOwnership === "expo";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -36,7 +40,7 @@ export async function scheduleOrderNotification(type: "submitted" | "processing"
       sound: true,
       data: { type },
     },
-    trigger: null, // immediate local notification
+    trigger: null,
   });
 }
 
@@ -62,11 +66,14 @@ export function usePushNotifications() {
           sound: "default",
         });
       }
+
+      // Remote push token — only in standalone/dev builds, not Expo Go
+      if (!isExpoGo) {
+        await Notifications.getExpoPushTokenAsync();
+      }
     })();
 
-    listenerRef.current = Notifications.addNotificationReceivedListener(() => {
-      // notification received while app is open — handled by system
-    });
+    listenerRef.current = Notifications.addNotificationReceivedListener(() => {});
 
     return () => { listenerRef.current?.remove(); };
   }, []);
