@@ -1,8 +1,9 @@
 import { useState } from "react";
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput,
-  Alert, Clipboard, KeyboardAvoidingView, Platform,
+  Alert, KeyboardAvoidingView, Platform,
 } from "react-native";
+import * as Clipboard from "expo-clipboard";
 import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -167,7 +168,7 @@ export default function CryptoScreen() {
     addItem({
       id:       `crypto-buy-${Date.now()}`,
       cardId:   "crypto-buy",
-      cardName: `Achat ${crypto.name} — ${numBuyUsd}$ → Wallet : ${walletAddr.slice(0, 16)}... (${walletNetwork})`,
+      cardName: `Achat ${crypto.name} — ${numBuyUsd}$ → Wallet : ${walletAddr} (${walletNetwork})`,
       amount:   `${numBuyUsd}$ → ${fcfaBuy.toLocaleString("fr-FR")} FCFA`,
       price:    fcfaBuy,
     });
@@ -180,8 +181,8 @@ export default function CryptoScreen() {
     resetForms();
   };
 
-  const copyAddr = (addr: string) => {
-    Clipboard.setString(addr);
+  const copyAddr = async (addr: string) => {
+    await Clipboard.setStringAsync(addr);
     Alert.alert("Copié ✓", "Adresse copiée dans le presse-papiers.");
   };
 

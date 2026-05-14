@@ -4,6 +4,8 @@ import Constants from "expo-constants";
 import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+const isNative = Platform.OS === "android" || Platform.OS === "ios";
+
 const PUSH_TOKEN_KEY = "@chreolempire_push_token";
 const isExpoGo = Constants.appOwnership === "expo";
 
@@ -49,6 +51,7 @@ export async function scheduleOrderNotification(
   type: "submitted" | "processing" | "done",
   detail?: string
 ) {
+  if (!isNative) return;
   const messages = {
     submitted: {
       title: "✅ Commande reçue !",
@@ -82,6 +85,7 @@ export function usePushNotifications() {
   const listenerRef = useRef<Notifications.EventSubscription | null>(null);
 
   useEffect(() => {
+    if (!isNative) return;
     (async () => {
       const { status: existing } = await Notifications.getPermissionsAsync();
       let finalStatus = existing;

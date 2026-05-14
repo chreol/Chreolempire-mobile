@@ -158,9 +158,14 @@ function buildReceiptHtml(order: any): string {
   <div style="background:#0A1200;border-radius:16px;border:1px solid #25D36633;padding:18px;margin-bottom:16px;text-align:center;">
     <p style="color:#FFFFFF;font-size:14px;font-weight:800;margin:0 0 6px;">⭐ Satisfait de nos services ?</p>
     <p style="color:#AAAAAA;font-size:12px;margin:0 0 14px;">Votre avis aide d'autres clients à nous faire confiance.</p>
-    <a href="https://www.google.com/maps/search/?api=1&query=Chreol+Empire+Douala+Cameroun" style="display:inline-block;background:#4285F4;color:#FFFFFF;font-size:13px;font-weight:800;text-decoration:none;padding:10px 22px;border-radius:100px;">
-      🗺️ Laisser un avis Google
-    </a>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+      <a href="https://www.google.com/maps/search/?api=1&query=Chreol+Empire+Douala+Cameroun" style="display:inline-block;background:#4285F4;color:#FFFFFF;font-size:13px;font-weight:800;text-decoration:none;padding:10px 18px;border-radius:100px;margin:4px;">
+        🗺️ Avis Google
+      </a>
+      <a href="https://www.trustpilot.com/review/monelecam.fr" style="display:inline-block;background:#00B67A;color:#FFFFFF;font-size:13px;font-weight:800;text-decoration:none;padding:10px 18px;border-radius:100px;margin:4px;">
+        ★ Avis Trustpilot
+      </a>
+    </div>
   </div>
 
   <div style="text-align:center;padding-top:20px;border-top:1px solid #1A1B20;">
@@ -217,22 +222,29 @@ serve(async (req) => {
           .eq("id", orderId)
           .single();
 
+        console.log("[receipt] order.client_email =", order?.client_email);
+
         if (order?.client_email) {
           const orderWithCode = { ...order, gift_code: giftCode ?? order.gift_code };
           const html = buildReceiptHtml(orderWithCode);
 
-          await fetch("https://api.brevo.com/v3/smtp/email", {
+          const brevoRes = await fetch("https://api.brevo.com/v3/smtp/email", {
             method: "POST",
             headers: { "api-key": BREVO_KEY, "Content-Type": "application/json" },
             body: JSON.stringify({
-              sender: { name: "Chreol Empire", email: "chreolempire00@gmail.com" },
+              sender: { name: "Chreol Empire", email: "noreply@chreolempire.com" },
               to: [{ email: order.client_email, name: order.client_name || "client" }],
               subject: "✅ Votre commande a été traitée — Chreol Empire",
               htmlContent: html,
             }),
           });
+
+          const brevoBody = await brevoRes.text();
+          console.log("[receipt] Brevo status =", brevoRes.status, "body =", brevoBody);
         }
-      } catch { /* receipt email is best-effort */ }
+      } catch (emailErr) {
+        console.error("[receipt] error =", String(emailErr));
+      }
     }
 
     return new Response(JSON.stringify({ success: true }), {

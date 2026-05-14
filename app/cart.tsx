@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  Linking, Alert, Clipboard, TextInput, KeyboardAvoidingView, Platform,
+  Linking, Alert, TextInput, KeyboardAvoidingView, Platform,
 } from "react-native";
+import * as Clipboard from "expo-clipboard";
 import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -41,15 +42,55 @@ const PAYMENT_METHODS = [
 
 type PaymentId = (typeof PAYMENT_METHODS)[number]["id"];
 
-const CRYPTO_TYPES = [
-  "USDT TRC-20", "USDT ERC-20", "USDC TRC-20", "BTC", "TRX",
-];
+// ─── CardName parsers ─────────────────────────────────────────────────────────
+function parseCouponCardName(cn: string) {
+  return {
+    couponType: cn.match(/^Échange (.+?) - Code/)?.[1] ?? "",
+    code:       cn.match(/Code : (.+?) —/)?.[1] ?? "",
+    benefName:  cn.match(/Bénéficiaire : (.+?) \(/)?.[1] ?? "",
+    operator:   cn.match(/\((.+?) - Téléphone/)?.[1] ?? "",
+    phone:      cn.match(/Téléphone : \+237(.+?)\)/)?.[1] ?? "",
+  };
+}
+function parseCryptoSellCardName(cn: string) {
+  return {
+    cryptoName: cn.match(/Vente (.+?) —/)?.[1] ?? "",
+    amount:     cn.match(/— ([\d.,]+)\$ via/)?.[1] ?? "",
+    network:    cn.match(/via (.+?) — Hash/)?.[1] ?? "",
+    txHash:     cn.match(/Hash: (.+?) —/)?.[1] ?? "",
+    benefName:  cn.match(/Bénéficiaire : (.+?) \(/)?.[1] ?? "",
+    operator:   cn.match(/\((MTN Mobile Money|Orange Money)/)?.[1] ?? "",
+    phone:      cn.match(/\+237(\d+)\)/)?.[1] ?? "",
+  };
+}
+function parseCryptoBuyCardName(cn: string) {
+  return {
+    cryptoName: cn.match(/Achat (.+?) —/)?.[1] ?? "",
+    amount:     cn.match(/— ([\d.,]+)\$ →/)?.[1] ?? "",
+    wallet:     cn.match(/Wallet : (.+?) \(/)?.[1] ?? "",
+    network:    cn.match(/\((.+?)\)\s*$/)?.[1] ?? "",
+  };
+}
+function parsePaypalSellCardName(cn: string) {
+  return {
+    amount:    cn.match(/— ([\d.,]+)€/)?.[1] ?? "",
+    benefName: cn.match(/Bénéficiaire : (.+?) \(/)?.[1] ?? "",
+    operator:  cn.match(/\((MTN Mobile Money|Orange Money)/)?.[1] ?? "",
+    phone:     cn.match(/\+237(\d+)\)/)?.[1] ?? "",
+  };
+}
+function parsePaypalBuyCardName(cn: string) {
+  return {
+    amount:   cn.match(/— ([\d.,]+)€/)?.[1] ?? "",
+    paypalId: cn.match(/Compte : (.+)$/)?.[1] ?? "",
+  };
+}
 
 // ─── PaymentInstructions ──────────────────────────────────────────────────────
 function PaymentInstructions({ id, total }: { id: PaymentId; total: number }) {
   const fmt = total.toLocaleString("fr-FR");
-  const copyCode = (code: string) => {
-    Clipboard.setString(code);
+  const copyCode = async (code: string) => {
+    await Clipboard.setStringAsync(code);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     Alert.alert("Copié !", `Code copié : ${code}`);
   };
@@ -243,27 +284,14 @@ export default function CartScreen() {
 
   // ── Formulaires par type ─────────────────────────────────────────────────
   // UBA (recharge: data parsed from cardName; uba_card: name+phone form)
-  const [ubaName,     setUbaName]     = useState("");
-  const [ubaPhone,    setUbaPhone]    = useState("");
+  const [ubaName,  setUbaName]  = useState("");
+  const [ubaPhone, setUbaPhone] = useState("");
   // Crypto achat
-  const [cbCryptoType, setCbCryptoType] = useState("USDT TRC-20");
-  const [cbWallet,     setCbWallet]     = useState("");
-  const [cbName,       setCbName]       = useState("");
-  const [cbPhone,      setCbPhone]      = useState("");
-  // PayPal achat
-  const [ppEmail, setPpEmail] = useState("");
-  const [ppName,  setPpName]  = useState("");
-  const [ppPhone, setPpPhone] = useState("");
-  // Vente (crypto-sell / paypal-sell)
-  const [sellOp,   setSellOp]   = useState<"MTN" | "Orange">("MTN");
-  const [sellMomo, setSellMomo] = useState("");
-  const [sellName, setSellName] = useState("");
+  const [cbOp,   setCbOp]   = useState<"MTN" | "Orange">("MTN");
+  const [cbName, setCbName] = useState("");
+  const [cbPhone, setCbPhone] = useState("");
   // Coupons
   const [cpnAmount, setCpnAmount] = useState("");
-  const [cpnOp,     setCpnOp]    = useState<"MTN" | "Orange">("MTN");
-  const [cpnMomo,   setCpnMomo]  = useState("");
-  const [cpnName,   setCpnName]  = useState("");
-  const [cpnPhone,  setCpnPhone] = useState("");
 
   // ── Pré-remplissage depuis le profil ────────────────────────────────────
   useEffect(() => {
@@ -273,12 +301,8 @@ export default function CartScreen() {
   useEffect(() => {
     if (!profile.name) return;
     const n = profile.name;
-    const up = n.toUpperCase();
-    setUbaName(prev => prev || up);
+    setUbaName(prev => prev || n.toUpperCase());
     setCbName(prev => prev || n);
-    setPpName(prev => prev || n);
-    setSellName(prev => prev || n);
-    setCpnName(prev => prev || n);
   }, [profile.name]);
 
   // ── WhatsApp message builder ─────────────────────────────────────────────
@@ -301,23 +325,24 @@ export default function CartScreen() {
     // ── Coupons ──
     if (couponItems.length > 0) {
       const lines = couponItems.map(i => `  • ${i.cardName}\n    ➜ ${i.amount}`).join("\n");
-      const momoLine = `📲 *Réception :* ${cpnOp} MoMo — ${cpnMomo.trim()}`;
+      const cpn0 = parseCouponCardName(couponItems[0]?.cardName ?? "");
+      const momoLine = `📲 *Réception :* ${cpn0.operator} — +237${cpn0.phone}`;
       const amtLine  = cpnAmount.trim() ? `💰 *Montant estimé :* ${cpnAmount.trim()} FCFA\n` : "";
-      msg += `🎟️ *DEMANDE D'ÉCHANGE COUPONS*\n${lines}\n\n${amtLine}${momoLine}\n👤 *Nom :* ${cpnName.trim()}\n📱 *Téléphone :* ${cpnPhone.trim()}${emailLine}\n\n📸 *Je vais vous envoyer ici la photo ou capture de mes coupons.*`;
+      msg += `🎟️ *DEMANDE D'ÉCHANGE COUPONS*\n${lines}\n\n${amtLine}${momoLine}\n👤 *Nom :* ${cpn0.benefName}${emailLine}\n\n📸 *Je vais vous envoyer ici la photo ou capture de mes coupons.*`;
     }
 
     // ── Vente crypto ──
     if (cryptoSellItems.length > 0) {
       if (couponItems.length > 0) msg += `\n\n${"─".repeat(30)}\n\n`;
       const lines = cryptoSellItems.map(i => `  • ${i.cardName}\n    ➜ Montant : ${i.amount}`).join("\n");
-      msg += `₿ *DEMANDE DE VENTE CRYPTO*\n${lines}\n\n📲 *Réception :* ${sellOp} MoMo — ${sellMomo.trim()}\n👤 *Nom :* ${sellName.trim()}${emailLine}\n\n📲 *Je vais vous envoyer ici la capture de la transaction blockchain.*`;
+      msg += `₿ *DEMANDE DE VENTE CRYPTO*\n${lines}${emailLine}\n\n📲 *Je vais vous envoyer ici la capture de la transaction blockchain.*`;
     }
 
     // ── Vente PayPal ──
     if (paypalSellItems.length > 0) {
       if (couponItems.length > 0 || cryptoSellItems.length > 0) msg += `\n\n${"─".repeat(30)}\n\n`;
       const lines = paypalSellItems.map(i => `  • ${i.cardName}\n    ➜ Montant : ${i.amount}`).join("\n");
-      msg += `💶 *DEMANDE DE VENTE PAYPAL*\n${lines}\n\n📲 *Réception :* ${sellOp} MoMo — ${sellMomo.trim()}\n👤 *Nom :* ${sellName.trim()}${emailLine}\n\n📲 *Je vais vous envoyer ici la capture prouvant l'envoi PayPal.*`;
+      msg += `💶 *DEMANDE DE VENTE PAYPAL*\n${lines}${emailLine}\n\n📲 *Je vais vous envoyer ici la capture prouvant l'envoi PayPal.*`;
     }
 
     // ── Commande d'achat ──
@@ -335,11 +360,13 @@ export default function CartScreen() {
       } else if (ubaItems.length > 0) {
         detailBlock += `\n\n🏦 *Détails UBA :*\n  👤 Nom : ${ubaName.trim()}\n  📱 Téléphone : ${ubaPhone.trim()}`;
       }
-      if (cryptoBuyItems.length > 0 && cbWallet.trim()) {
-        detailBlock += `\n\n₿ *Détails Achat Crypto :*\n  🔷 Type : ${cbCryptoType}\n  📬 Wallet : ${cbWallet.trim()}\n  👤 Nom : ${cbName.trim()}\n  📱 Téléphone : ${cbPhone.trim()}`;
+      if (cryptoBuyItems.length > 0) {
+        const cbParsed = parseCryptoBuyCardName(cryptoBuyItems[0]?.cardName ?? "");
+        detailBlock += `\n\n₿ *Détails Achat Crypto :*\n  🔷 ${cbParsed.cryptoName} — ${cbParsed.network}\n  📬 Wallet : ${cbParsed.wallet}\n  🌐 Opérateur : ${cbOp}\n  👤 Nom : ${cbName.trim()}\n  📱 Téléphone : ${cbPhone.trim()}`;
       }
-      if (paypalBuyItems.length > 0 && ppEmail.trim()) {
-        detailBlock += `\n\n💶 *Détails Achat PayPal :*\n  📧 Email PayPal : ${ppEmail.trim()}\n  👤 Nom : ${ppName.trim()}\n  📱 Téléphone : ${ppPhone.trim()}`;
+      if (paypalBuyItems.length > 0) {
+        const ppParsed = parsePaypalBuyCardName(paypalBuyItems[0]?.cardName ?? "");
+        detailBlock += `\n\n💶 *Détails Achat PayPal :*\n  📧 Compte PayPal : ${ppParsed.paypalId}`;
       }
 
       let paymentLine = `${selectedMethod.icon} *${selectedMethod.label}*`;
@@ -363,13 +390,26 @@ export default function CartScreen() {
       return { type: "uba_recharge", card: d.card, clientId: d.clientId, name: d.name, phone: d.phone };
     }
     if (ubaItems.length > 0)     return { type: "uba_card",     name: ubaName.trim(), phone: ubaPhone.trim() };
-    if (cryptoBuyItems.length > 0) return { type: "crypto_buy", cryptoType: cbCryptoType, wallet: cbWallet.trim(), name: cbName.trim(), phone: cbPhone.trim() };
-    if (paypalBuyItems.length > 0) return { type: "paypal_buy", paypalEmail: ppEmail.trim(), name: ppName.trim(), phone: ppPhone.trim() };
-    if (cryptoSellItems.length > 0) return { type: "crypto_sell", operator: sellOp, momoNumber: sellMomo.trim(), name: sellName.trim() };
-    if (paypalSellItems.length > 0) return { type: "paypal_sell", operator: sellOp, momoNumber: sellMomo.trim(), name: sellName.trim() };
+    if (cryptoBuyItems.length > 0) {
+      const d = parseCryptoBuyCardName(cryptoBuyItems[0]?.cardName ?? "");
+      return { type: "crypto_buy", cryptoType: `${d.cryptoName} ${d.network}`, wallet: d.wallet, operator: cbOp, name: cbName.trim(), phone: cbPhone.trim() };
+    }
+    if (paypalBuyItems.length > 0) {
+      const d = parsePaypalBuyCardName(paypalBuyItems[0]?.cardName ?? "");
+      return { type: "paypal_buy", paypalId: d.paypalId };
+    }
+    if (cryptoSellItems.length > 0) {
+      const d = parseCryptoSellCardName(cryptoSellItems[0]?.cardName ?? "");
+      return { type: "crypto_sell", cryptoName: d.cryptoName, network: d.network, txHash: d.txHash, operator: d.operator, momoNumber: d.phone, name: d.benefName };
+    }
+    if (paypalSellItems.length > 0) {
+      const d = parsePaypalSellCardName(paypalSellItems[0]?.cardName ?? "");
+      return { type: "paypal_sell", operator: d.operator, momoNumber: d.phone, name: d.benefName };
+    }
     if (couponItems.length > 0) {
+      const d = parseCouponCardName(couponItems[0]?.cardName ?? "");
       const couponType = couponItems[0]?.cardId.replace("coupon-", "").toUpperCase() ?? "";
-      return { type: "coupon_exchange", couponType, amount: cpnAmount.trim(), operator: cpnOp, momoNumber: cpnMomo.trim(), name: cpnName.trim(), phone: cpnPhone.trim() };
+      return { type: "coupon_exchange", couponType, amount: cpnAmount.trim(), operator: d.operator, momoNumber: d.phone, name: d.benefName };
     }
     return null;
   };
@@ -393,27 +433,12 @@ export default function CartScreen() {
 
     // Crypto achat
     if (cryptoBuyItems.length > 0) {
-      if (!cbWallet.trim()) { Alert.alert("Wallet requis", "Veuillez saisir votre adresse wallet."); return; }
       if (!cbName.trim() || !cbPhone.trim()) { Alert.alert("Infos manquantes", "Nom et téléphone requis."); return; }
-    }
-
-    // PayPal achat
-    if (paypalBuyItems.length > 0) {
-      if (!ppEmail.trim() || !ppEmail.includes("@")) { Alert.alert("Email PayPal requis", "Veuillez saisir votre adresse email PayPal."); return; }
-      if (!ppName.trim() || !ppPhone.trim()) { Alert.alert("Infos manquantes", "Nom et téléphone requis."); return; }
-    }
-
-    // Vente (crypto ou paypal)
-    if (cryptoSellItems.length > 0 || paypalSellItems.length > 0) {
-      if (!sellMomo.trim() || sellMomo.trim().length < 9) { Alert.alert("Numéro MoMo requis", "Veuillez saisir votre numéro Mobile Money (min. 9 chiffres)."); return; }
-      if (!sellName.trim()) { Alert.alert("Nom requis", "Veuillez renseigner votre nom."); return; }
     }
 
     // Coupons
     if (couponItems.length > 0) {
       if (!cpnAmount.trim()) { Alert.alert("Montant requis", "Veuillez indiquer le montant estimé de votre coupon."); return; }
-      if (!cpnMomo.trim() || cpnMomo.trim().length < 9) { Alert.alert("Numéro MoMo requis", "Veuillez saisir votre numéro Mobile Money."); return; }
-      if (!cpnName.trim() || !cpnPhone.trim()) { Alert.alert("Infos manquantes", "Nom et téléphone requis."); return; }
     }
 
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -578,16 +603,19 @@ export default function CartScreen() {
             {cryptoBuyItems.length > 0 && (
               <View style={styles.formCard}>
                 <Text style={styles.formCardTitle}>₿ Détails Achat Crypto</Text>
-                <Text style={styles.formLabel}>Type de crypto *</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cryptoChips}>
-                  {CRYPTO_TYPES.map(ct => (
-                    <TouchableOpacity key={ct} style={[styles.cryptoChip, cbCryptoType === ct && styles.cryptoChipActive]} onPress={() => setCbCryptoType(ct)} activeOpacity={0.8}>
-                      <Text style={[styles.cryptoChipText, cbCryptoType === ct && styles.cryptoChipTextActive]}>{ct}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-                <Text style={styles.formLabel}>Adresse wallet *</Text>
-                <TextInput style={styles.formInput} value={cbWallet} onChangeText={setCbWallet} placeholder="TXkLmN3p9qR7sT..." placeholderTextColor={colors.text.muted} autoCapitalize="none" autoCorrect={false} />
+                <Text style={styles.formHint}>Wallet et réseau saisis lors de la demande</Text>
+                {cryptoBuyItems.map(item => {
+                  const d = parseCryptoBuyCardName(item.cardName);
+                  return (
+                    <View key={item.id}>
+                      <View style={styles.recapRow}><Text style={styles.recapLabel}>Crypto</Text><Text style={styles.recapValue}>{d.cryptoName}</Text></View>
+                      <View style={styles.recapRow}><Text style={styles.recapLabel}>Wallet</Text><Text style={[styles.recapValue, { fontSize: 10 }]}>{d.wallet}</Text></View>
+                      <View style={styles.recapRow}><Text style={styles.recapLabel}>Réseau</Text><Text style={styles.recapValue}>{d.network}</Text></View>
+                    </View>
+                  );
+                })}
+                <Text style={styles.formLabel}>Opérateur Mobile Money *</Text>
+                <OperatorSelector value={cbOp} onChange={setCbOp} />
                 <Text style={styles.formLabel}>Nom complet *</Text>
                 <TextInput style={styles.formInput} value={cbName} onChangeText={setCbName} placeholder="Votre nom" placeholderTextColor={colors.text.muted} />
                 <Text style={styles.formLabel}>Téléphone *</Text>
@@ -595,16 +623,20 @@ export default function CartScreen() {
               </View>
             )}
 
-            {/* ── Formulaire PayPal achat ── */}
+            {/* ── Récapitulatif PayPal achat ── */}
             {paypalBuyItems.length > 0 && (
               <View style={styles.formCard}>
-                <Text style={styles.formCardTitle}>💶 Détails Achat PayPal</Text>
-                <Text style={styles.formLabel}>Email PayPal destinataire *</Text>
-                <TextInput style={styles.formInput} value={ppEmail} onChangeText={setPpEmail} placeholder="votre@paypal.com" placeholderTextColor={colors.text.muted} keyboardType="email-address" autoCapitalize="none" />
-                <Text style={styles.formLabel}>Nom complet *</Text>
-                <TextInput style={styles.formInput} value={ppName} onChangeText={setPpName} placeholder="Votre nom" placeholderTextColor={colors.text.muted} />
-                <Text style={styles.formLabel}>Téléphone *</Text>
-                <TextInput style={styles.formInput} value={ppPhone} onChangeText={setPpPhone} placeholder="6XX XXX XXX" placeholderTextColor={colors.text.muted} keyboardType="phone-pad" />
+                <Text style={styles.formCardTitle}>💶 Récapitulatif Achat PayPal</Text>
+                <Text style={styles.formHint}>Informations saisies lors de la demande</Text>
+                {paypalBuyItems.map(item => {
+                  const d = parsePaypalBuyCardName(item.cardName);
+                  return (
+                    <View key={item.id}>
+                      <View style={styles.recapRow}><Text style={styles.recapLabel}>Montant</Text><Text style={styles.recapValue}>{d.amount}€</Text></View>
+                      <View style={styles.recapRow}><Text style={styles.recapLabel}>Compte PayPal</Text><Text style={styles.recapValue}>{d.paypalId}</Text></View>
+                    </View>
+                  );
+                })}
               </View>
             )}
 
@@ -615,48 +647,78 @@ export default function CartScreen() {
           </>
         )}
 
-        {/* ── Formulaire Vente (crypto-sell + paypal-sell) ── */}
-        {(cryptoSellItems.length > 0 || paypalSellItems.length > 0) && (
+        {/* ── Vente Crypto (récap lecture seule) ── */}
+        {cryptoSellItems.length > 0 && (
           <>
-            {cryptoSellItems.length > 0 && (
-              <View style={styles.couponReminderBox}>
-                <Text style={styles.couponReminderTitle}>₿ Envoi crypto requis</Text>
-                <Text style={styles.couponReminderText}>Envoyez la capture d'écran de la transaction blockchain sur WhatsApp après soumission.</Text>
-              </View>
-            )}
-            {paypalSellItems.length > 0 && (
-              <View style={styles.paypalReminderBox}>
-                <Text style={styles.paypalReminderTitle}>📲 Envoi PayPal requis</Text>
-                <Text style={styles.paypalReminderText}>Envoyez la capture prouvant l'envoi PayPal sur WhatsApp après soumission.</Text>
-              </View>
-            )}
+            <View style={styles.couponReminderBox}>
+              <Text style={styles.couponReminderTitle}>₿ Envoi crypto requis</Text>
+              <Text style={styles.couponReminderText}>Envoyez la capture d'écran de la transaction blockchain sur WhatsApp après soumission.</Text>
+            </View>
             <View style={styles.formCard}>
-              <Text style={styles.formCardTitle}>📲 Réception du paiement MoMo</Text>
-              <Text style={styles.formLabel}>Opérateur *</Text>
-              <OperatorSelector value={sellOp} onChange={setSellOp} />
-              <Text style={styles.formLabel}>Numéro Mobile Money *</Text>
-              <TextInput style={styles.formInput} value={sellMomo} onChangeText={setSellMomo} placeholder="6XX XXX XXX" placeholderTextColor={colors.text.muted} keyboardType="phone-pad" />
-              <Text style={styles.formLabel}>Nom complet *</Text>
-              <TextInput style={styles.formInput} value={sellName} onChangeText={setSellName} placeholder="Votre nom" placeholderTextColor={colors.text.muted} />
+              <Text style={styles.formCardTitle}>₿ Récapitulatif Vente Crypto</Text>
+              <Text style={styles.formHint}>Informations saisies lors de l'ajout au panier</Text>
+              {cryptoSellItems.map(item => {
+                const d = parseCryptoSellCardName(item.cardName);
+                return (
+                  <View key={item.id}>
+                    <View style={styles.recapRow}><Text style={styles.recapLabel}>Crypto</Text><Text style={styles.recapValue}>{d.cryptoName}</Text></View>
+                    <View style={styles.recapRow}><Text style={styles.recapLabel}>Montant</Text><Text style={styles.recapValue}>{d.amount}$</Text></View>
+                    <View style={styles.recapRow}><Text style={styles.recapLabel}>Réseau</Text><Text style={styles.recapValue}>{d.network}</Text></View>
+                    <View style={styles.recapRow}><Text style={styles.recapLabel}>Hash TX</Text><Text style={[styles.recapValue, { fontSize: 10 }]}>{d.txHash}</Text></View>
+                    <View style={styles.recapRow}><Text style={styles.recapLabel}>Bénéficiaire</Text><Text style={styles.recapValue}>{d.benefName}</Text></View>
+                    <View style={styles.recapRow}><Text style={styles.recapLabel}>Opérateur</Text><Text style={styles.recapValue}>{d.operator}</Text></View>
+                    <View style={styles.recapRow}><Text style={styles.recapLabel}>Téléphone</Text><Text style={styles.recapValue}>+237{d.phone}</Text></View>
+                  </View>
+                );
+              })}
             </View>
           </>
         )}
 
-        {/* ── Formulaire Coupons ── */}
+        {/* ── Vente PayPal (récap lecture seule) ── */}
+        {paypalSellItems.length > 0 && (
+          <>
+            <View style={styles.paypalReminderBox}>
+              <Text style={styles.paypalReminderTitle}>📲 Envoi PayPal requis</Text>
+              <Text style={styles.paypalReminderText}>Envoyez à LARAMBAMBO@GMAIL.COM en Famille ou Proche. Joignez la capture sur WhatsApp après soumission.</Text>
+            </View>
+            <View style={styles.formCard}>
+              <Text style={styles.formCardTitle}>💶 Récapitulatif Vente PayPal</Text>
+              <Text style={styles.formHint}>Informations saisies lors de l'ajout au panier</Text>
+              {paypalSellItems.map(item => {
+                const d = parsePaypalSellCardName(item.cardName);
+                return (
+                  <View key={item.id}>
+                    <View style={styles.recapRow}><Text style={styles.recapLabel}>Montant</Text><Text style={styles.recapValue}>{d.amount}€</Text></View>
+                    <View style={styles.recapRow}><Text style={styles.recapLabel}>Bénéficiaire</Text><Text style={styles.recapValue}>{d.benefName}</Text></View>
+                    <View style={styles.recapRow}><Text style={styles.recapLabel}>Opérateur</Text><Text style={styles.recapValue}>{d.operator}</Text></View>
+                    <View style={styles.recapRow}><Text style={styles.recapLabel}>Téléphone</Text><Text style={styles.recapValue}>+237{d.phone}</Text></View>
+                  </View>
+                );
+              })}
+            </View>
+          </>
+        )}
+
+        {/* ── Échange Coupons ── */}
         {couponItems.length > 0 && (
           <View style={styles.formCard}>
-            <Text style={styles.formCardTitle}>🎟️ Détails Échange Coupon</Text>
+            <Text style={styles.formCardTitle}>🎟️ Récapitulatif Échange Coupon</Text>
             <Text style={styles.formHint}>📸 Envoyez la photo du coupon sur WhatsApp après soumission</Text>
+            {couponItems.map(item => {
+              const d = parseCouponCardName(item.cardName);
+              return (
+                <View key={item.id}>
+                  <View style={styles.recapRow}><Text style={styles.recapLabel}>Type</Text><Text style={styles.recapValue}>{d.couponType}</Text></View>
+                  <View style={styles.recapRow}><Text style={styles.recapLabel}>Code</Text><Text style={styles.recapValue}>{d.code}</Text></View>
+                  <View style={styles.recapRow}><Text style={styles.recapLabel}>Bénéficiaire</Text><Text style={styles.recapValue}>{d.benefName}</Text></View>
+                  <View style={styles.recapRow}><Text style={styles.recapLabel}>Opérateur</Text><Text style={styles.recapValue}>{d.operator}</Text></View>
+                  <View style={styles.recapRow}><Text style={styles.recapLabel}>Téléphone</Text><Text style={styles.recapValue}>+237{d.phone}</Text></View>
+                </View>
+              );
+            })}
             <Text style={styles.formLabel}>Montant estimé (FCFA) *</Text>
             <TextInput style={styles.formInput} value={cpnAmount} onChangeText={setCpnAmount} placeholder="ex: 44000" placeholderTextColor={colors.text.muted} keyboardType="numeric" />
-            <Text style={styles.formLabel}>Opérateur pour recevoir *</Text>
-            <OperatorSelector value={cpnOp} onChange={setCpnOp} />
-            <Text style={styles.formLabel}>Numéro Mobile Money *</Text>
-            <TextInput style={styles.formInput} value={cpnMomo} onChangeText={setCpnMomo} placeholder="6XX XXX XXX" placeholderTextColor={colors.text.muted} keyboardType="phone-pad" />
-            <Text style={styles.formLabel}>Nom complet *</Text>
-            <TextInput style={styles.formInput} value={cpnName} onChangeText={setCpnName} placeholder="Votre nom" placeholderTextColor={colors.text.muted} />
-            <Text style={styles.formLabel}>Téléphone *</Text>
-            <TextInput style={styles.formInput} value={cpnPhone} onChangeText={setCpnPhone} placeholder="6XX XXX XXX" placeholderTextColor={colors.text.muted} keyboardType="phone-pad" />
           </View>
         )}
 

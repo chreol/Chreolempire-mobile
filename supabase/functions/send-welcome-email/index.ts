@@ -54,11 +54,16 @@ serve(async (req) => {
   </div>
 
   <div style="background:#0A1200;border-radius:16px;border:1px solid #25D36633;padding:18px;margin-bottom:16px;text-align:center;">
-    <p style="color:#FFFFFF;font-size:14px;font-weight:800;margin:0 0 6px;">⭐ Satisfait de nos services ?</p>
-    <p style="color:#AAAAAA;font-size:12px;margin:0 0 14px;">Laissez-nous un avis sur Google Maps — cela nous aide énormément !</p>
-    <a href="https://www.google.com/maps/search/?api=1&query=Chreol+Empire+Douala+Cameroun" style="display:inline-block;background:#4285F4;color:#FFFFFF;font-size:13px;font-weight:800;text-decoration:none;padding:10px 22px;border-radius:100px;">
-      🗺️ Laisser un avis Google
-    </a>
+    <p style="color:#FFFFFF;font-size:14px;font-weight:800;margin:0 0 6px;">⭐ Donnez-nous votre avis</p>
+    <p style="color:#AAAAAA;font-size:12px;margin:0 0 14px;">Cela nous aide énormément et aide d'autres clients à nous faire confiance !</p>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+      <a href="https://www.google.com/maps/search/?api=1&query=Chreol+Empire+Douala+Cameroun" style="display:inline-block;background:#4285F4;color:#FFFFFF;font-size:13px;font-weight:800;text-decoration:none;padding:10px 18px;border-radius:100px;margin:4px;">
+        🗺️ Avis Google
+      </a>
+      <a href="https://www.trustpilot.com/review/monelecam.fr" style="display:inline-block;background:#00B67A;color:#FFFFFF;font-size:13px;font-weight:800;text-decoration:none;padding:10px 18px;border-radius:100px;margin:4px;">
+        ★ Avis Trustpilot
+      </a>
+    </div>
   </div>
 
   <div style="text-align:center;padding-top:20px;border-top:1px solid #1A1B20;">
@@ -77,7 +82,7 @@ serve(async (req) => {
       method: "POST",
       headers: { "api-key": BREVO_KEY, "Content-Type": "application/json" },
       body: JSON.stringify({
-        sender: { name: "Chreol Empire", email: "chreolempire00@gmail.com" },
+        sender: { name: "Chreol Empire", email: "noreply@chreolempire.com" },
         to: [{ email, name: name?.trim() || "client" }],
         subject: `👑 Bienvenue chez Chreol Empire, ${firstName} !`,
         htmlContent: html,
