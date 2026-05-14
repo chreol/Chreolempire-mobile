@@ -9,7 +9,7 @@ import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import { Image } from "expo-image";
 
-const IC_TG = require("../../assets/telegram.png");
+const IC_TG = require("../../assets/telegram.webp");
 import { MotiView } from "moti";
 import { colors, radius } from "@/constants/theme";
 import { CONTACT } from "@/constants/services";

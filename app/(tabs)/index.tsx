@@ -17,21 +17,21 @@ import { useHistory } from "@/contexts/HistoryContext";
 const { width } = Dimensions.get("window");
 const CARD_W = (width - 44) / 2;
 
-const LOGO         = require("../../assets/chreolempire logo avec contact m.png");
-const STORE_BG     = require("../../assets/boutique.png");
-const IMG_PSN      = require("../../assets/PlayStation_Store_Card.png");
-const IMG_ITU      = require("../../assets/itunes-gifts-for-business-hero_2x.jpg");
+const LOGO         = require("../../assets/chreolempire logo avec contact m.webp");
+const STORE_BG     = require("../../assets/boutique.webp");
+const IMG_PSN      = require("../../assets/PlayStation_Store_Card.webp");
+const IMG_ITU      = require("../../assets/itunes-gifts-for-business-hero_2x.webp");
 const IMG_ROB      = require("../../assets/App-icon-roblox.webp");
 const IMG_UBA      = require("../../assets/UBA Cameroun logo.png");
-const IMG_UBA_CARD = require("../../assets/Carte UBA Cameroun pour RECHARGE.png");
-const IMG_TRANS    = require("../../assets/contenu-pack-transcash.jpg");
-const IMG_CRYPTO   = require("../../assets/Monnaie Crypto Chreol Empire en cfa mobile money.png");
+const IMG_UBA_CARD = require("../../assets/Carte UBA Cameroun pour RECHARGE.webp");
+const IMG_TRANS    = require("../../assets/contenu-pack-transcash.webp");
+const IMG_CRYPTO   = require("../../assets/Monnaie Crypto Chreol Empire en cfa mobile money.webp");
 // Réseaux sociaux
-const IC_WA        = require("../../assets/whatsapp.png");
-const IC_INSTA     = require("../../assets/instagram.jpg");
-const IC_TG        = require("../../assets/telegram.png");
-const IC_X         = require("../../assets/x-twitter.png");
-const IC_EMAIL     = require("../../assets/email.png");
+const IC_WA        = require("../../assets/whatsapp.webp");
+const IC_INSTA     = require("../../assets/instagram.webp");
+const IC_TG        = require("../../assets/telegram.webp");
+const IC_X         = require("../../assets/x-twitter.webp");
+const IC_EMAIL     = require("../../assets/email.webp");
 
 export default function HomeScreen() {
   const router = useRouter();

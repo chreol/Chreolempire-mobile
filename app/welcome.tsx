@@ -11,7 +11,7 @@ import * as Haptics from "expo-haptics";
 import { colors, radius } from "@/constants/theme";
 import { useProfile } from "@/contexts/ProfileContext";
 
-const LOGO = require("../assets/chreolempire logo avec contact m.png");
+const LOGO = require("../assets/chreolempire logo avec contact m.webp");
 
 const MONTHS = [
   "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",

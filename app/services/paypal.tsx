@@ -12,7 +12,7 @@ import { colors, radius } from "@/constants/theme";
 import { CONTACT } from "@/constants/services";
 import { useCart } from "@/contexts/CartContext";
 
-const IMG_HERO = require("../../assets/Achat_VentePaypal.png");
+const IMG_HERO = require("../../assets/Achat_VentePaypal.webp");
 
 type Direction  = "buy" | "sell";
 type MomoNetwork = "orange" | "mtn";

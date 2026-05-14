@@ -6,7 +6,7 @@ import { MotiView } from "moti";
 import { colors } from "@/constants/theme";
 import { useProfile } from "@/contexts/ProfileContext";
 
-const LOGO = require("../assets/chreolempire logo avec contact m.png");
+const LOGO = require("../assets/chreolempire logo avec contact m.webp");
 
 export default function SplashIndex() {
   const router = useRouter();

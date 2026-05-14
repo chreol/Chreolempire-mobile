@@ -54,7 +54,6 @@
       },
       "package": "com.chreolempire.mobile",
       "versionCode": 1,
-      "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.INTERNET",

@@ -7,14 +7,14 @@ import Animated, {
 import { colors } from "@/constants/theme";
 
 const TICKER_TEXT =
-  "USDT  ▸  Achat 700 FCFA/$  •  Vente 580 FCFA/$     ◆     " +
-  "BTC  ▸  Achat 70M FCFA  •  Vente 58M FCFA     ◆     " +
-  "TRX  ▸  Achat 182 FCFA  •  Vente 151 FCFA     ◆     " +
-  "PayPal  ▸  Achat 700 FCFA/€  •  Vente 580 FCFA/€     ◆     " +
-  "PCS  ▸  Vente 440 FCFA/€     ◆     " +
-  "Transcash  ▸  Vente 440 FCFA/€     ◆     " +
-  "USDC  ▸  Achat 700 FCFA/$  •  Vente 580 FCFA/$     ◆     " +
-  "SOL  ▸  Sur demande     ◆     ";
+  "USDT  ▸  Nous achetons et vendons  •  Achatons à 580 FCFA/$  •  Vendons à 700 FCFA/$     ◆     " +
+  "BTC  ▸  Nous achetons et vendons  •  Achatons à 580 FCFA  •  Vendons à 700 FCFA     ◆     " +
+  "TRX  ▸  Nous achetons et vendons  •  Achatons à 151 FCFA  •  Vendons à 182 FCFA     ◆     " +
+  "PayPal  ▸  Nous achetons et vendons  •  Achatons à 580 FCFA/€  •  Vendons à 700 FCFA/€     ◆     " +
+  "PCS  ▸  Nous achetons à 450 FCFA/€     ◆     " +
+  "Transcash  ▸  Nous achetons à 450 FCFA/€     ◆     " +
+  "USDC  ▸  Nous achetons et vendons  •  Achatons à 580 FCFA/$  •  Vendons à 700 FCFA/$     ◆     " +
+  "SOL & autres ▸  Nous achetons et vendons  •  Tarif sur demande     ◆     ";
 
 export default function RateTicker() {
   const translateX = useSharedValue(0);

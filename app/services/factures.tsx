@@ -12,14 +12,14 @@ import { colors, radius } from "@/constants/theme";
 import { CONTACT } from "@/constants/services";
 
 // ── Assets locaux ──────────────────────────────────────────────
-const IMG_ORANGE  = require("../../../assets/orange-money.png");
-const IMG_MTN     = require("../../../assets/MTN Mobile Money (MoMo) Payment .png");
-const IMG_CANAL   = require("../../../assets/Canal+ logo.png");
-const IMG_ENEO    = require("../../../assets/Eneo logo.jpg");
-const IMG_CAMWAT  = require("../../../assets/Camwater logo.jpg");
-const IMG_STAR    = require("../../../assets/StarTimes logo.png");
-const IMG_EXPRESS = require("../../../assets/Express Union logo.png");
-const IMG_YOOMEE  = require("../../../assets/Yoomee Money logo.jpg");
+const IMG_ORANGE  = require("../../../assets/orange-money.webp");
+const IMG_MTN     = require("../../../assets/MTN Mobile Money (MoMo) Payment .webp");
+const IMG_CANAL   = require("../../../assets/Canal+ logo.webp");
+const IMG_ENEO    = require("../../../assets/Eneo logo.webp");
+const IMG_CAMWAT  = require("../../../assets/Camwater logo.webp");
+const IMG_STAR    = require("../../../assets/StarTimes logo.webp");
+const IMG_EXPRESS = require("../../../assets/Express Union logo.webp");
+const IMG_YOOMEE  = require("../../../assets/Yoomee Money logo.webp");
 
 const BILL_LOGOS: Record<string, ReturnType<typeof require>> = {
   canal:     IMG_CANAL,

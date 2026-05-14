@@ -16,16 +16,16 @@ import { useLoyalty } from "@/contexts/LoyaltyContext";
 import { scheduleOrderNotification } from "@/hooks/usePushNotifications";
 import * as StoreReview from "expo-store-review";
 
-const IMG_NEERO = require("../assets/Neero paiement @blondelccde.png");
+const IMG_NEERO = require("../assets/Neero paiement @blondelccde.webp");
 
 const PAYIMG: Record<string, any> = {
-  mtn:     require("../assets/MTN Mobile Money (MoMo) Payment .png"),
-  orange:  require("../assets/orange-money.png"),
-  paypal:  require("../assets/Paypal.png"),
-  neero:   require("../assets/neero paiement.png"),
-  especes: require("../assets/Espece.png"),
-  crypto:  require("../assets/Cryptomonnaies-visuel.png"),
-  uba:     require("../assets/ubaCameroun_logo.png"),
+  mtn:     require("../assets/MTN Mobile Money (MoMo) Payment .webp"),
+  orange:  require("../assets/orange-money.webp"),
+  paypal:  require("../assets/Paypal.webp"),
+  neero:   require("../assets/neero paiement.webp"),
+  especes: require("../assets/Espece.webp"),
+  crypto:  require("../assets/Cryptomonnaies-visuel.webp"),
+  uba:     require("../assets/ubaCameroun_logo.webp"),
 };
 
 // ─── Payment methods ──────────────────────────────────────────────────────────

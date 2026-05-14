@@ -14,13 +14,13 @@ import { useCart } from "@/contexts/CartContext";
 import { useStockStatus } from "@/hooks/useStockStatus";
 
 const LOCAL_IMAGES: Record<string, any> = {
-  psn:        require("../../assets/PlayStation_Store_Card.png"),
-  itunes:     require("../../assets/itunes-gifts-for-business-hero_2x.jpg"),
+  psn:        require("../../assets/PlayStation_Store_Card.webp"),
+  itunes:     require("../../assets/itunes-gifts-for-business-hero_2x.webp"),
   roblox:     require("../../assets/App-icon-roblox.webp"),
-  steam:      require("../../assets/Steam_Gift_Cards.png"),
-  razer:      require("../../assets/Gift_cards-Razer_Gold.png"),
-  nintendo:   require("../../assets/Gift card Nintendo.png"),
-  googleplay: require("../../assets/Gift card GooglePlay.png"),
+  steam:      require("../../assets/Steam_Gift_Cards.webp"),
+  razer:      require("../../assets/Gift_cards-Razer_Gold.webp"),
+  nintendo:   require("../../assets/Gift card Nintendo.webp"),
+  googleplay: require("../../assets/Gift card GooglePlay.webp"),
 };
 
 const TABS = [
