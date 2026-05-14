@@ -3,13 +3,11 @@ import {
   View, Text, StyleSheet, TouchableOpacity, Alert,
   Linking, ScrollView, Modal, TextInput,
 } from "react-native";
+import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
-import { Image } from "expo-image";
-
-const IC_TG = require("../../assets/telegram.webp");
 import { MotiView } from "moti";
 import { colors, radius } from "@/constants/theme";
 import { CONTACT } from "@/constants/services";
@@ -18,6 +16,8 @@ import { useHistory } from "@/contexts/HistoryContext";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useLoyalty } from "@/contexts/LoyaltyContext";
 
+const IC_TG = require("../../assets/telegram.webp");
+
 const MONTHS = [
   "Jan", "Fév", "Mar", "Avr", "Mai", "Juin",
   "Juil", "Août", "Sep", "Oct", "Nov", "Déc",
@@ -25,7 +25,25 @@ const MONTHS = [
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { profile, updateEmail, updatePhoto } = useProfile();
+  const { profile, updateEmail, updatePhoto, resetProfile } = useProfile();
+  const { history } = useHistory();
+  const { stamps } = useLoyalty();
+
+  const [emailModal, setEmailModal] = useState(false);
+  const [emailInput, setEmailInput] = useState(profile.email);
+
+  const [waModal, setWaModal] = useState(false);
+  const [waPseudo, setWaPseudo] = useState(profile.name);
+  const [waMessage, setWaMessage] = useState("");
+
+  const totalFcfa = history.reduce((sum, o) => sum + (o.total ?? 0), 0);
+
+  const initials = profile.name
+    ? profile.name.trim().split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2)
+    : "👑";
+
+  const currentMonth = new Date().getMonth() + 1;
+  const isBirthMonth = profile.birthMonth === currentMonth;
 
   const pickPhoto = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -44,20 +62,6 @@ export default function ProfileScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
   };
-  const { history } = useHistory();
-  const { stamps } = useLoyalty();
-
-  const [emailModal, setEmailModal] = useState(false);
-  const [emailInput, setEmailInput] = useState(profile.email);
-
-  const totalFcfa = history.reduce((sum, o) => sum + (o.total ?? 0), 0);
-
-  const initials = profile.name
-    ? profile.name.trim().split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2)
-    : "👑";
-
-  const currentMonth = new Date().getMonth() + 1;
-  const isBirthMonth = profile.birthMonth === currentMonth;
 
   const handleSaveEmail = async () => {
     const val = emailInput.trim().toLowerCase();
@@ -70,31 +74,137 @@ export default function ProfileScreen() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
-  const menuItems = [
+  const handleSendWa = () => {
+    if (!waMessage.trim()) {
+      Alert.alert("Message vide", "Veuillez écrire votre message avant d'envoyer.");
+      return;
+    }
+    const pseudo = waPseudo.trim() || "Client";
+    const msg = `Bonjour Chreol Empire 👋,\n\n*Pseudo :* ${pseudo}\n\n*Message :*\n${waMessage.trim()}\n\n_Envoyé depuis l'application Chreol Empire_`;
+    Linking.openURL(`https://wa.me/${CONTACT.whatsapp}?text=${encodeURIComponent(msg)}`);
+    setWaModal(false);
+    setWaMessage("");
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      "Se déconnecter",
+      "Votre profil local sera réinitialisé. Votre historique de commandes est conservé.",
+      [
+        { text: "Annuler", style: "cancel" },
+        {
+          text: "Se déconnecter", style: "destructive",
+          onPress: async () => {
+            await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            await resetProfile();
+            router.replace("/welcome");
+          },
+        },
+      ]
+    );
+  };
+
+  type MenuItem = {
+    id: string;
+    emoji: string;
+    image?: any;
+    label: string;
+    subtitle: string;
+    color: string;
+    onPress: () => void;
+    danger?: boolean;
+  };
+
+  type MenuSection = {
+    title: string;
+    items: MenuItem[];
+  };
+
+  const SECTIONS: MenuSection[] = [
     {
-      id: "whatsapp", emoji: "💬", label: "Support WhatsApp",
-      subtitle: "Répond en moins de 5 min", color: "#25D366",
-      onPress: () => Linking.openURL(`https://wa.me/${CONTACT.whatsapp}`),
+      title: "Support",
+      items: [
+        {
+          id: "whatsapp", emoji: "💬", label: "Support WhatsApp",
+          subtitle: "Répond en moins de 5 min", color: "#25D366",
+          onPress: () => { setWaPseudo(profile.name); setWaModal(true); },
+        },
+        {
+          id: "telegram", emoji: "", image: IC_TG, label: "Telegram",
+          subtitle: CONTACT.telegramHandle, color: "#0088CC",
+          onPress: () => Linking.openURL(CONTACT.telegram),
+        },
+      ],
     },
     {
-      id: "telegram", emoji: "", image: IC_TG, label: "Telegram",
-      subtitle: CONTACT.telegramHandle, color: "#0088CC",
-      onPress: () => Linking.openURL(CONTACT.telegram),
+      title: "Chreol Empire",
+      items: [
+        {
+          id: "website", emoji: "🌐", label: "Site officiel",
+          subtitle: "www.chreolempire.com", color: colors.brand.gold,
+          onPress: () => Linking.openURL(CONTACT.website),
+        },
+        {
+          id: "bot", emoji: "🤖", label: "Bot Telegram",
+          subtitle: "@chreolempireBot", color: "#0088CC",
+          onPress: () => Linking.openURL("https://t.me/chreolempireBot"),
+        },
+        {
+          id: "avis", emoji: "⭐", label: "Laisser un avis Google",
+          subtitle: "Partagez votre expérience", color: "#FACC15",
+          onPress: () => Linking.openURL(CONTACT.googleMaps),
+        },
+      ],
     },
     {
-      id: "googlemaps", emoji: "⭐", label: "Laisser un avis Google",
-      subtitle: "Partagez votre expérience", color: "#FACC15",
-      onPress: () => Linking.openURL(CONTACT.googleMaps),
+      title: "Informations",
+      items: [
+        {
+          id: "about", emoji: "ℹ️", label: "À Propos",
+          subtitle: "Qui sommes-nous ?", color: colors.brand.gold,
+          onPress: () => Linking.openURL(CONTACT.aboutUrl),
+        },
+        {
+          id: "faq", emoji: "❓", label: "FAQ",
+          subtitle: "Questions fréquentes", color: "#60A5FA",
+          onPress: () => Linking.openURL(CONTACT.faqUrl),
+        },
+        {
+          id: "contact", emoji: "📞", label: "Contact",
+          subtitle: "Nos coordonnées", color: "#26A17B",
+          onPress: () => Linking.openURL(CONTACT.contactUrl),
+        },
+        {
+          id: "sitemap", emoji: "🗺️", label: "Plan du site",
+          subtitle: "Toutes les sections de l'app", color: colors.text.muted,
+          onPress: () => router.push("/sitemap"),
+        },
+      ],
     },
     {
-      id: "edit", emoji: "✏️", label: "Modifier mon profil",
-      subtitle: "Nom, ville, email, anniversaire", color: colors.brand.gold,
-      onPress: () => router.push("/welcome"),
+      title: "Légal",
+      items: [
+        {
+          id: "terms", emoji: "📜", label: "Conditions d'utilisation",
+          subtitle: "CGU et politique de confidentialité", color: colors.text.muted,
+          onPress: () => router.push("/terms"),
+        },
+      ],
     },
     {
-      id: "terms", emoji: "📄", label: "Conditions d'utilisation",
-      subtitle: "CGU et politique de confidentialité", color: colors.text.muted,
-      onPress: () => Linking.openURL(CONTACT.website),
+      title: "Mon Compte",
+      items: [
+        {
+          id: "edit", emoji: "✏️", label: "Modifier mon profil",
+          subtitle: "Nom, ville, email, anniversaire", color: colors.brand.gold,
+          onPress: () => router.push("/welcome"),
+        },
+        {
+          id: "logout", emoji: "🔴", label: "Se déconnecter",
+          subtitle: "Réinitialiser le profil local", color: "#EF4444",
+          onPress: handleLogout, danger: true,
+        },
+      ],
     },
   ];
 
@@ -106,7 +216,6 @@ export default function ProfileScreen() {
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
 
-        {/* Bannière anniversaire */}
         {isBirthMonth && (
           <MotiView
             from={{ opacity: 0, scale: 0.95 }}
@@ -138,6 +247,7 @@ export default function ProfileScreen() {
                 <Text style={styles.avatarCameraIcon}>📷</Text>
               </View>
             </TouchableOpacity>
+
             <View style={{ flex: 1 }}>
               <Text style={styles.userName}>{profile.name || "Membre Chreol Empire"}</Text>
               <Text style={styles.userCity}>{profile.city ? `📍 ${profile.city}` : ""}</Text>
@@ -154,12 +264,12 @@ export default function ProfileScreen() {
                 <Text style={styles.userBirth}>🎂 {MONTHS[profile.birthMonth - 1]}</Text>
               )}
             </View>
+
             <View style={styles.vipBadge}>
               <Text style={styles.vipText}>👑 VIP</Text>
             </View>
           </View>
 
-          {/* Stats */}
           <View style={styles.statsRow}>
             <View style={styles.statItem}>
               <Text style={styles.statValue}>{history.length}</Text>
@@ -185,30 +295,33 @@ export default function ProfileScreen() {
           <LoyaltyCard />
         </View>
 
-        {/* Menu */}
-        <View style={styles.menuSection}>
-          {menuItems.map((item, i) => (
-            <MotiView
-              key={item.id}
-              from={{ opacity: 0, translateX: -16 }}
-              animate={{ opacity: 1, translateX: 0 }}
-              transition={{ delay: 100 + i * 70, type: "timing", duration: 320 }}
-            >
-              <TouchableOpacity style={styles.menuItem} activeOpacity={0.8} onPress={item.onPress}>
-                <View style={[styles.menuIcon, { backgroundColor: item.color + "22" }]}>
-                  {(item as any).image
-                    ? <Image source={(item as any).image} style={styles.menuImg} contentFit="contain" />
-                    : <Text style={styles.menuEmoji}>{item.emoji}</Text>}
-                </View>
-                <View style={styles.menuText}>
-                  <Text style={styles.menuLabel}>{item.label}</Text>
-                  <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
-                </View>
-                <Text style={styles.menuArrow}>›</Text>
-              </TouchableOpacity>
-            </MotiView>
-          ))}
-        </View>
+        {/* Sections menu */}
+        {SECTIONS.map((section, si) => (
+          <View key={section.title} style={styles.menuSection}>
+            <Text style={styles.sectionTitle}>{section.title.toUpperCase()}</Text>
+            {section.items.map((item, i) => (
+              <MotiView
+                key={item.id}
+                from={{ opacity: 0, translateX: -16 }}
+                animate={{ opacity: 1, translateX: 0 }}
+                transition={{ delay: si * 40 + i * 60, type: "timing", duration: 300 }}
+              >
+                <TouchableOpacity style={styles.menuItem} activeOpacity={0.8} onPress={item.onPress}>
+                  <View style={[styles.menuIcon, { backgroundColor: item.color + "22" }]}>
+                    {item.image
+                      ? <Image source={item.image} style={styles.menuImg} contentFit="contain" />
+                      : <Text style={styles.menuEmoji}>{item.emoji}</Text>}
+                  </View>
+                  <View style={styles.menuText}>
+                    <Text style={[styles.menuLabel, item.danger && { color: "#EF4444" }]}>{item.label}</Text>
+                    <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
+                  </View>
+                  <Text style={[styles.menuArrow, item.danger && { color: "#EF4444" }]}>›</Text>
+                </TouchableOpacity>
+              </MotiView>
+            ))}
+          </View>
+        ))}
 
         <Text style={styles.version}>Chreol Empire v1.0.0 · 🇨🇲 Douala</Text>
       </ScrollView>
@@ -235,6 +348,48 @@ export default function ProfileScreen() {
               </TouchableOpacity>
               <TouchableOpacity style={styles.modalSave} onPress={handleSaveEmail}>
                 <Text style={styles.modalSaveText}>Enregistrer</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Modal WhatsApp Support */}
+      <Modal visible={waModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>💬 Support WhatsApp</Text>
+            <Text style={styles.modalSub}>Notre équipe vous répond en moins de 5 minutes.</Text>
+
+            <Text style={styles.fieldLabel}>Votre pseudo</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={waPseudo}
+              onChangeText={setWaPseudo}
+              placeholder="Votre prénom ou pseudo"
+              placeholderTextColor={colors.text.muted}
+              autoCapitalize="words"
+            />
+
+            <Text style={styles.fieldLabel}>Votre message *</Text>
+            <TextInput
+              style={[styles.modalInput, styles.textArea]}
+              value={waMessage}
+              onChangeText={setWaMessage}
+              placeholder="Décrivez votre demande, problème ou question..."
+              placeholderTextColor={colors.text.muted}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+              autoFocus
+            />
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.modalCancel} onPress={() => { setWaModal(false); setWaMessage(""); }}>
+                <Text style={styles.modalCancelText}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.modalSave, { backgroundColor: "#25D366" }]} onPress={handleSendWa}>
+                <Text style={styles.modalSaveText}>Envoyer 📲</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -308,7 +463,11 @@ const styles = StyleSheet.create({
 
   loyaltyWrap: { marginHorizontal: 16, marginTop: 16 },
 
-  menuSection: { padding: 16, gap: 8 },
+  menuSection: { paddingHorizontal: 16, paddingTop: 20, gap: 8 },
+  sectionTitle: {
+    fontSize: 11, fontWeight: "800", color: colors.text.muted,
+    letterSpacing: 0.8, marginBottom: 2,
+  },
   menuItem: {
     flexDirection: "row", alignItems: "center",
     backgroundColor: colors.bg.card,
@@ -324,25 +483,24 @@ const styles = StyleSheet.create({
   menuSubtitle: { fontSize: 12, color: colors.text.secondary, marginTop: 2 },
   menuArrow: { fontSize: 20, color: colors.text.muted },
 
-  version: { textAlign: "center", color: colors.text.muted, fontSize: 12, paddingBottom: 20 },
+  version: { textAlign: "center", color: colors.text.muted, fontSize: 12, paddingTop: 20, paddingBottom: 8 },
 
-  modalOverlay: {
-    flex: 1, backgroundColor: "rgba(0,0,0,0.7)",
-    justifyContent: "flex-end",
-  },
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "flex-end" },
   modalCard: {
     backgroundColor: colors.bg.card,
     borderTopLeftRadius: radius["2xl"], borderTopRightRadius: radius["2xl"],
     padding: 24, gap: 14,
   },
   modalTitle: { fontSize: 18, fontWeight: "800", color: colors.text.primary },
-  modalSub: { fontSize: 13, color: colors.text.secondary },
+  modalSub: { fontSize: 13, color: colors.text.secondary, marginTop: -6 },
+  fieldLabel: { fontSize: 11, fontWeight: "700", color: colors.text.muted, textTransform: "uppercase", letterSpacing: 0.4 },
   modalInput: {
     backgroundColor: colors.bg.elevated, borderRadius: radius.lg,
     borderWidth: 1.5, borderColor: colors.border.strong,
     paddingHorizontal: 16, paddingVertical: 14,
-    fontSize: 16, color: colors.text.primary,
+    fontSize: 15, color: colors.text.primary,
   },
+  textArea: { height: 110, paddingTop: 14 },
   modalActions: { flexDirection: "row", gap: 12 },
   modalCancel: {
     flex: 1, borderRadius: radius.full, borderWidth: 1.5,

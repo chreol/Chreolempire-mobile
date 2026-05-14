@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 
 export type OrderType = "achat" | "coupon" | "crypto-sell" | "paypal-sell" | "mixte";
+export type OrderStatus = "pending" | "processing" | "done" | "cancelled";
 
 export interface HistoryEntry {
   id: string;
@@ -11,11 +12,13 @@ export interface HistoryEntry {
   total: number;
   paymentMethod?: string;
   itemCount: number;
+  status: OrderStatus;
 }
 
 interface HistoryContextType {
   history: HistoryEntry[];
-  addEntry: (entry: Omit<HistoryEntry, "id" | "date">) => Promise<void>;
+  addEntry: (entry: Omit<HistoryEntry, "id" | "date" | "status">) => Promise<void>;
+  updateStatus: (id: string, status: OrderStatus) => Promise<void>;
   clearHistory: () => Promise<void>;
 }
 
@@ -28,7 +31,10 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY).then(raw => {
       if (raw) {
-        try { setHistory(JSON.parse(raw)); } catch { /* ignore corrupt data */ }
+        try {
+          const parsed = JSON.parse(raw);
+          setHistory(parsed.map((e: any) => ({ status: "pending", ...e })));
+        } catch { /* ignore corrupt data */ }
       }
     });
   }, []);
@@ -38,14 +44,23 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
   };
 
-  const addEntry = useCallback(async (entry: Omit<HistoryEntry, "id" | "date">) => {
+  const addEntry = useCallback(async (entry: Omit<HistoryEntry, "id" | "date" | "status">) => {
     const newEntry: HistoryEntry = {
       ...entry,
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       date: new Date().toISOString(),
+      status: "pending",
     };
     setHistory(prev => {
       const updated = [newEntry, ...prev];
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
+  const updateStatus = useCallback(async (id: string, status: OrderStatus) => {
+    setHistory(prev => {
+      const updated = prev.map(e => e.id === id ? { ...e, status } : e);
       AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       return updated;
     });
@@ -56,7 +71,7 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <HistoryContext.Provider value={{ history, addEntry, clearHistory }}>
+    <HistoryContext.Provider value={{ history, addEntry, updateStatus, clearHistory }}>
       {children}
     </HistoryContext.Provider>
   );

@@ -9,9 +9,15 @@ export const CONTACT = {
   address: "Vallée 3, Boutiques Deido, Douala, Cameroun",
   telegram: "https://t.me/chreolempire0",
   telegramHandle: "@chreolempire0",
+  telegramBot: "https://t.me/chreolempireBot",
+  telegramBotHandle: "@chreolempireBot",
   website: "https://chreolempire.com",
   paypalEmail: "LARAMBAMBO@GMAIL.COM",
   googleMaps: "https://www.google.com/maps/search/Chreol+Empire+Deido+Douala+Cameroun",
+  aboutUrl: "https://chreolempireapp.netlify.app/pages/about",
+  faqUrl: "https://chreolempireapp.netlify.app/pages/faq",
+  contactUrl: "https://chreolempireapp.netlify.app/pages/contact",
+  termsUrl: "https://chreolempireapp.netlify.app/pages/terms",
 };
 
 export const IMAGES = {

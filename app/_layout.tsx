@@ -38,6 +38,8 @@ export default function RootLayout() {
           <Stack.Screen name="services/crypto" options={{ animation: "slide_from_right" }} />
           <Stack.Screen name="services/paypal" options={{ animation: "slide_from_right" }} />
           <Stack.Screen name="services/factures" options={{ animation: "slide_from_right" }} />
+          <Stack.Screen name="terms" options={{ animation: "slide_from_right" }} />
+          <Stack.Screen name="sitemap" options={{ animation: "slide_from_right" }} />
         </Stack>
         <FloatingWaBot />
       </CartProvider>

@@ -212,7 +212,7 @@ function CartItemRow({ item, onQty, onRemove, incompatible }: {
 export default function CartScreen() {
   const router = useRouter();
   const { items, updateQty, removeItem, clearCart, total, count } = useCart();
-  const { addEntry } = useHistory();
+  const { addEntry, history } = useHistory();
   const { addStamp } = useLoyalty();
   const [payment, setPayment] = useState<PaymentId>("mtn");
   const [deliveryEmail, setDeliveryEmail] = useState("");
@@ -376,9 +376,9 @@ export default function CartScreen() {
         <View style={styles.emptyState}>
           <Text style={{ fontSize: 56 }}>🛒</Text>
           <Text style={styles.emptyTitle}>Panier vide</Text>
-          <Text style={styles.emptySub}>Ajoutez des articles depuis le catalogue</Text>
-          <TouchableOpacity style={styles.emptyBtn} onPress={() => router.replace("/services/cartes-cadeaux")}>
-            <Text style={styles.emptyBtnText}>Voir le catalogue →</Text>
+          <Text style={styles.emptySub}>Ajoutez des articles depuis nos services</Text>
+          <TouchableOpacity style={styles.emptyBtn} onPress={() => router.replace("/(tabs)/services")}>
+            <Text style={styles.emptyBtnText}>Voir nos services →</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>

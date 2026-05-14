@@ -1,21 +1,89 @@
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, Alert, Linking } from "react-native";
+import { useState } from "react";
+import {
+  View, Text, StyleSheet, TouchableOpacity, FlatList,
+  Alert, Linking, Modal,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { MotiView } from "moti";
-import { useHistory, HistoryEntry, OrderType } from "@/contexts/HistoryContext";
+import { useHistory, HistoryEntry, OrderType, OrderStatus } from "@/contexts/HistoryContext";
 import { colors, radius } from "@/constants/theme";
 import { CONTACT } from "@/constants/services";
 
 const TYPE_CONFIG: Record<OrderType, { label: string; color: string; emoji: string }> = {
-  achat:        { label: "Achat",          color: colors.brand.gold,  emoji: "🛒" },
-  coupon:       { label: "Échange coupon", color: "#60A5FA",           emoji: "🎟️" },
-  "crypto-sell":{ label: "Vente crypto",  color: "#26A17B",           emoji: "₿"  },
-  "paypal-sell":{ label: "Vente PayPal",  color: "#003087",           emoji: "💶" },
-  mixte:        { label: "Demande mixte", color: "#F97316",           emoji: "📦" },
+  achat:         { label: "Achat",          color: colors.brand.gold, emoji: "🛒" },
+  coupon:        { label: "Échange coupon", color: "#60A5FA",          emoji: "🎟️" },
+  "crypto-sell": { label: "Vente crypto",  color: "#26A17B",          emoji: "₿"  },
+  "paypal-sell": { label: "Vente PayPal",  color: "#003087",          emoji: "💶" },
+  mixte:         { label: "Demande mixte", color: "#F97316",          emoji: "📦" },
 };
 
-function HistoryCard({ entry, index }: { entry: HistoryEntry; index: number }) {
+const STATUS_CONFIG: Record<OrderStatus, { label: string; color: string; emoji: string }> = {
+  pending:    { label: "En attente",    color: "#F97316", emoji: "⏳" },
+  processing: { label: "En traitement", color: "#3B82F6", emoji: "🔄" },
+  done:       { label: "Terminé",       color: "#25D366", emoji: "✅" },
+  cancelled:  { label: "Annulé",        color: "#EF4444", emoji: "❌" },
+};
+
+const ALL_STATUSES: OrderStatus[] = ["pending", "processing", "done", "cancelled"];
+
+function StatusModal({
+  entry,
+  onClose,
+  onSelect,
+}: {
+  entry: HistoryEntry | null;
+  onClose: () => void;
+  onSelect: (id: string, status: OrderStatus) => void;
+}) {
+  if (!entry) return null;
+  return (
+    <Modal visible animationType="slide" transparent onRequestClose={onClose}>
+      <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={onClose}>
+        <View style={styles.modalCard}>
+          <View style={styles.modalHandle} />
+          <Text style={styles.modalTitle}>Mettre à jour le statut</Text>
+          <Text style={styles.modalSub} numberOfLines={1}>{entry.summary}</Text>
+          <View style={styles.statusList}>
+            {ALL_STATUSES.map(s => {
+              const cfg = STATUS_CONFIG[s];
+              const isActive = entry.status === s;
+              return (
+                <TouchableOpacity
+                  key={s}
+                  style={[styles.statusOption, isActive && { borderColor: cfg.color, backgroundColor: cfg.color + "18" }]}
+                  onPress={() => { onSelect(entry.id, s); onClose(); }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.statusOptionEmoji}>{cfg.emoji}</Text>
+                  <Text style={[styles.statusOptionLabel, isActive && { color: cfg.color, fontWeight: "800" }]}>
+                    {cfg.label}
+                  </Text>
+                  {isActive && <Text style={[styles.statusCheck, { color: cfg.color }]}>✓</Text>}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          <TouchableOpacity style={styles.modalCancel} onPress={onClose} activeOpacity={0.8}>
+            <Text style={styles.modalCancelText}>Fermer</Text>
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+}
+
+function HistoryCard({
+  entry,
+  index,
+  onStatusPress,
+}: {
+  entry: HistoryEntry;
+  index: number;
+  onStatusPress: (entry: HistoryEntry) => void;
+}) {
   const cfg = TYPE_CONFIG[entry.type];
+  const statusCfg = STATUS_CONFIG[entry.status ?? "pending"];
   const date = new Date(entry.date);
   const dateStr = date.toLocaleDateString("fr-FR", {
     day: "2-digit", month: "short", year: "numeric",
@@ -26,8 +94,7 @@ function HistoryCard({ entry, index }: { entry: HistoryEntry; index: number }) {
 
   const handleRelancer = async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const typeLabel = cfg.label;
-    const msg = `Bonjour Chreol Empire 👋,\n\nJe souhaite relancer ma commande du ${dateStr} :\n\n📋 *Type :* ${typeLabel}\n📝 *Détails :* ${entry.summary}\n💰 *Montant :* ${entry.total.toLocaleString("fr-FR")} FCFA${entry.paymentMethod ? `\n💳 *Paiement :* ${entry.paymentMethod}` : ""}\n\nMerci de confirmer le statut.`;
+    const msg = `Bonjour Chreol Empire 👋,\n\nJe souhaite relancer ma commande du ${dateStr} :\n\n📋 *Type :* ${cfg.label}\n📝 *Détails :* ${entry.summary}\n💰 *Montant :* ${entry.total.toLocaleString("fr-FR")} FCFA${entry.paymentMethod ? `\n💳 *Paiement :* ${entry.paymentMethod}` : ""}\n\nMerci de confirmer le statut.`;
     Linking.openURL(`https://wa.me/${CONTACT.whatsapp}?text=${encodeURIComponent(msg)}`);
   };
 
@@ -54,16 +121,22 @@ function HistoryCard({ entry, index }: { entry: HistoryEntry; index: number }) {
             {entry.total.toLocaleString("fr-FR")} FCFA
           </Text>
         </View>
-        <View style={styles.statusBubble}>
-          <Text style={styles.statusText}>⏳ Envoyé sur WhatsApp</Text>
-        </View>
+        <TouchableOpacity
+          style={[styles.statusBubble, { backgroundColor: statusCfg.color + "22", borderColor: statusCfg.color + "55" }]}
+          onPress={() => { Haptics.selectionAsync(); onStatusPress(entry); }}
+          activeOpacity={0.75}
+        >
+          <Text style={[styles.statusText, { color: statusCfg.color }]}>
+            {statusCfg.emoji} {statusCfg.label}
+          </Text>
+          <Text style={[styles.statusEdit, { color: statusCfg.color }]}>✎</Text>
+        </TouchableOpacity>
       </View>
 
       {entry.paymentMethod && (
         <Text style={styles.payMethod}>💳 {entry.paymentMethod}</Text>
       )}
 
-      {/* Relancer */}
       <TouchableOpacity style={styles.relancerBtn} onPress={handleRelancer} activeOpacity={0.8}>
         <Text style={styles.relancerText}>🔁 Relancer la commande</Text>
       </TouchableOpacity>
@@ -72,7 +145,13 @@ function HistoryCard({ entry, index }: { entry: HistoryEntry; index: number }) {
 }
 
 export default function OrdersScreen() {
-  const { history, clearHistory } = useHistory();
+  const { history, updateStatus, clearHistory } = useHistory();
+  const [statusEntry, setStatusEntry] = useState<HistoryEntry | null>(null);
+
+  const handleStatusUpdate = async (id: string, status: OrderStatus) => {
+    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    await updateStatus(id, status);
+  };
 
   const confirmClear = () => Alert.alert(
     "Vider l'historique",
@@ -115,12 +194,20 @@ export default function OrdersScreen() {
       ) : (
         <FlatList
           data={history}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item, index }) => <HistoryCard entry={item} index={index} />}
+          keyExtractor={item => item.id}
+          renderItem={({ item, index }) => (
+            <HistoryCard entry={item} index={index} onStatusPress={setStatusEntry} />
+          )}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
         />
       )}
+
+      <StatusModal
+        entry={statusEntry}
+        onClose={() => setStatusEntry(null)}
+        onSelect={handleStatusUpdate}
+      />
     </SafeAreaView>
   );
 }
@@ -155,11 +242,12 @@ const styles = StyleSheet.create({
   totalLabel: { fontSize: 10, fontWeight: "700", color: colors.text.muted, textTransform: "uppercase", letterSpacing: 0.4 },
   totalValue: { fontSize: 18, fontWeight: "900" },
   statusBubble: {
-    backgroundColor: "#F9731622", borderRadius: radius.full,
-    borderWidth: 1, borderColor: "#F9731644",
-    paddingHorizontal: 10, paddingVertical: 4,
+    flexDirection: "row", alignItems: "center", gap: 4,
+    borderRadius: radius.full, borderWidth: 1,
+    paddingHorizontal: 10, paddingVertical: 5,
   },
-  statusText: { fontSize: 11, fontWeight: "700", color: "#F97316" },
+  statusText: { fontSize: 11, fontWeight: "700" },
+  statusEdit: { fontSize: 11, opacity: 0.7 },
   payMethod: { fontSize: 11, color: colors.text.muted, marginTop: -4 },
 
   emptyState: { flex: 1, alignItems: "center", justifyContent: "center", padding: 40 },
@@ -173,4 +261,33 @@ const styles = StyleSheet.create({
     paddingVertical: 10, alignItems: "center", marginTop: 2,
   },
   relancerText: { fontSize: 13, fontWeight: "800", color: "#25D366" },
+
+  // Status modal
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" },
+  modalCard: {
+    backgroundColor: colors.bg.card,
+    borderTopLeftRadius: radius["2xl"], borderTopRightRadius: radius["2xl"],
+    padding: 24, gap: 12,
+  },
+  modalHandle: {
+    width: 40, height: 4, borderRadius: 2,
+    backgroundColor: colors.border.strong, alignSelf: "center", marginBottom: 4,
+  },
+  modalTitle: { fontSize: 17, fontWeight: "800", color: colors.text.primary },
+  modalSub: { fontSize: 12, color: colors.text.muted, marginBottom: 4 },
+  statusList: { gap: 8 },
+  statusOption: {
+    flexDirection: "row", alignItems: "center", gap: 12,
+    backgroundColor: colors.bg.elevated,
+    borderRadius: radius.xl, borderWidth: 1.5, borderColor: colors.border.default,
+    paddingHorizontal: 16, paddingVertical: 14,
+  },
+  statusOptionEmoji: { fontSize: 18 },
+  statusOptionLabel: { flex: 1, fontSize: 15, fontWeight: "600", color: colors.text.primary },
+  statusCheck: { fontSize: 16, fontWeight: "900" },
+  modalCancel: {
+    borderRadius: radius.full, borderWidth: 1.5, borderColor: colors.border.default,
+    paddingVertical: 14, alignItems: "center", marginTop: 4,
+  },
+  modalCancelText: { fontSize: 15, fontWeight: "700", color: colors.text.secondary },
 });

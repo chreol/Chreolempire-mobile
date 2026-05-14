@@ -21,6 +21,7 @@ interface ProfileContextType {
   saveProfile: (data: Omit<Profile, "hasProfile">) => Promise<void>;
   updateEmail: (email: string) => Promise<void>;
   updatePhoto: (uri: string) => Promise<void>;
+  resetProfile: () => Promise<void>;
   isLoading: boolean;
 }
 
@@ -56,8 +57,13 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     await persist({ ...profile, photoUri: uri });
   };
 
+  const resetProfile = async () => {
+    await AsyncStorage.removeItem(STORAGE_KEY);
+    setProfile(DEFAULT);
+  };
+
   return (
-    <ProfileContext.Provider value={{ profile, saveProfile, updateEmail, updatePhoto, isLoading }}>
+    <ProfileContext.Provider value={{ profile, saveProfile, updateEmail, updatePhoto, resetProfile, isLoading }}>
       {children}
     </ProfileContext.Provider>
   );
