@@ -49,7 +49,8 @@ CREATE POLICY "Users see own orders" ON orders
 CREATE POLICY "Users insert own orders" ON orders
   FOR INSERT WITH CHECK (user_id = auth.jwt() ->> 'sub');
 
--- Webhook trigger: send email when status = 'delivered'
+-- Admin functions use service role key — they bypass RLS automatically
+-- Webhook trigger: send email when status changes (paid / delivered / failed)
 -- Configure in Supabase Dashboard → Database → Webhooks
 -- Event: UPDATE on orders table
 -- URL: https://<project>.supabase.co/functions/v1/send-order-email

@@ -1,15 +1,17 @@
 import { useState, useRef } from "react";
 import {
   View, Text, StyleSheet, TouchableOpacity, TextInput,
-  ScrollView, KeyboardAvoidingView, Platform, Alert,
+  ScrollView, KeyboardAvoidingView, Platform, Alert, ActivityIndicator,
 } from "react-native";
 import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { MotiView } from "moti";
 import * as Haptics from "expo-haptics";
+import { FontAwesome } from "@expo/vector-icons";
 import { colors, radius } from "@/constants/theme";
 import { useProfile } from "@/contexts/ProfileContext";
+import { useAuth } from "@/hooks/useAuth";
 
 const LOGO = require("../assets/chreolempire logo avec contact m.webp");
 
@@ -23,6 +25,7 @@ const CITIES = ["Douala", "Yaoundé", "Bafoussam", "Bamenda", "Garoua", "Maroua"
 export default function WelcomeScreen() {
   const router = useRouter();
   const { saveProfile } = useProfile();
+  const { signInWithGoogle, signingIn } = useAuth();
 
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
@@ -32,8 +35,42 @@ export default function WelcomeScreen() {
   const [birthMonth, setBirthMonth] = useState<number | null>(null);
 
   const nameRef = useRef<TextInput>(null);
-
   const finalCity = city === "Autre" ? customCity : city;
+
+  const handleGoogleSignIn = async () => {
+    try {
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      const { user: googleUser, isNew } = await signInWithGoogle();
+
+      await saveProfile({
+        name: googleUser.displayName,
+        email: googleUser.email,
+        city: "",
+        birthMonth: null,
+        photoUri: googleUser.photoURL,
+      });
+
+      if (isNew && googleUser.email) {
+        const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
+        const key = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+        fetch(`${url}/functions/v1/send-welcome-email`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${key}`,
+          },
+          body: JSON.stringify({ email: googleUser.email, displayName: googleUser.displayName }),
+        }).catch(() => {});
+      }
+
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.replace("/(tabs)");
+    } catch (err: any) {
+      if (err?.message !== "cancelled") {
+        Alert.alert("Erreur", "Impossible de se connecter avec Google. Vérifiez votre connexion.");
+      }
+    }
+  };
 
   const handleNext = async () => {
     if (step === 0) {
@@ -64,6 +101,20 @@ export default function WelcomeScreen() {
       birthMonth,
       photoUri: null,
     });
+
+    if (email.trim()) {
+      const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
+      const key = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+      fetch(`${url}/functions/v1/send-welcome-email`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${key}`,
+        },
+        body: JSON.stringify({ email: email.trim().toLowerCase(), displayName: name.trim() }),
+      }).catch(() => {});
+    }
+
     router.replace("/(tabs)");
   };
 
@@ -71,10 +122,39 @@ export default function WelcomeScreen() {
     <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
 
-        {/* Logo */}
         <View style={styles.logoWrap}>
           <Image source={LOGO} style={styles.logo} contentFit="contain" />
         </View>
+
+        {/* Google Sign-In — toujours visible en haut */}
+        <MotiView
+          from={{ opacity: 0, translateY: -10 }}
+          animate={{ opacity: 1, translateY: 0 }}
+          transition={{ type: "timing", duration: 400 }}
+          style={styles.googleSection}
+        >
+          <TouchableOpacity
+            style={styles.googleBtn}
+            onPress={handleGoogleSignIn}
+            disabled={signingIn}
+            activeOpacity={0.85}
+          >
+            {signingIn ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <FontAwesome name="google" size={18} color="#fff" style={{ marginRight: 10 }} />
+            )}
+            <Text style={styles.googleBtnText}>
+              {signingIn ? "Connexion en cours..." : "Continuer avec Google"}
+            </Text>
+          </TouchableOpacity>
+
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>ou créer un profil</Text>
+            <View style={styles.dividerLine} />
+          </View>
+        </MotiView>
 
         {/* Step dots */}
         <View style={styles.dots}>
@@ -191,7 +271,6 @@ export default function WelcomeScreen() {
           )}
         </ScrollView>
 
-        {/* Actions */}
         <View style={styles.actions}>
           {step > 0 && step < 2 && (
             <TouchableOpacity onPress={handleNext} style={styles.skipBtn} activeOpacity={0.7}>
@@ -219,6 +298,26 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg.primary },
   logoWrap: { alignItems: "center", paddingTop: 16 },
   logo: { width: 80, height: 80, borderRadius: 40 },
+
+  googleSection: { paddingHorizontal: 24, marginTop: 16 },
+  googleBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#1a73e8",
+    borderRadius: radius.full,
+    paddingVertical: 14,
+    shadowColor: "#1a73e8",
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  googleBtnText: { fontSize: 15, fontWeight: "700", color: "#fff" },
+
+  divider: { flexDirection: "row", alignItems: "center", marginTop: 16, gap: 10 },
+  dividerLine: { flex: 1, height: 1, backgroundColor: colors.border.default },
+  dividerText: { fontSize: 12, color: colors.text.muted, fontWeight: "600" },
+
   dots: { flexDirection: "row", justifyContent: "center", gap: 6, marginTop: 16, marginBottom: 8 },
   dot: { height: 8, borderRadius: 4 },
   content: { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 16, gap: 16 },

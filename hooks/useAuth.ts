@@ -19,10 +19,10 @@ const DEMO_USER: MockUser = {
 export function useAuth() {
   const [user, setUser] = useState<MockUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [signingIn, setSigningIn] = useState(false);
 
   useEffect(() => {
     if (DEMO_MODE) {
-      // En mode démo, on simule un utilisateur connecté après 1s
       const t = setTimeout(() => {
         setUser(DEMO_USER);
         setLoading(false);
@@ -30,23 +30,22 @@ export function useAuth() {
       return () => clearTimeout(t);
     }
 
-    // Mode production: Firebase Auth
     let unsubscribe: (() => void) | undefined;
     (async () => {
       try {
         const { auth } = await import("@/lib/firebase");
         const { onAuthStateChanged } = await import("firebase/auth");
         unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-          if (firebaseUser) {
-            setUser({
-              uid: firebaseUser.uid,
-              email: firebaseUser.email ?? "",
-              displayName: firebaseUser.displayName ?? "Utilisateur",
-              photoURL: firebaseUser.photoURL,
-            });
-          } else {
-            setUser(null);
-          }
+          setUser(
+            firebaseUser
+              ? {
+                  uid: firebaseUser.uid,
+                  email: firebaseUser.email ?? "",
+                  displayName: firebaseUser.displayName ?? "Utilisateur",
+                  photoURL: firebaseUser.photoURL,
+                }
+              : null
+          );
           setLoading(false);
         });
       } catch {
@@ -57,5 +56,67 @@ export function useAuth() {
     return () => unsubscribe?.();
   }, []);
 
-  return { user, loading, isAuthenticated: !!user };
+  const signInWithGoogle = async (): Promise<{ user: MockUser; isNew: boolean }> => {
+    if (DEMO_MODE) {
+      setUser(DEMO_USER);
+      return { user: DEMO_USER, isNew: false };
+    }
+
+    setSigningIn(true);
+    try {
+      const { GoogleSignin } = await import(
+        "@react-native-google-signin/google-signin"
+      );
+
+      GoogleSignin.configure({
+        webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+      });
+
+      await GoogleSignin.hasPlayServices();
+      const response = await GoogleSignin.signIn();
+
+      if (response.type === "cancelled") throw new Error("cancelled");
+
+      const { auth } = await import("@/lib/firebase");
+      const {
+        GoogleAuthProvider,
+        signInWithCredential,
+        getAdditionalUserInfo,
+      } = await import("firebase/auth");
+
+      const credential = GoogleAuthProvider.credential(response.data.idToken);
+      const result = await signInWithCredential(auth, credential);
+      const isNew = getAdditionalUserInfo(result)?.isNewUser ?? false;
+
+      const mappedUser: MockUser = {
+        uid: result.user.uid,
+        email: result.user.email ?? "",
+        displayName: result.user.displayName ?? "Utilisateur",
+        photoURL: result.user.photoURL,
+      };
+
+      setUser(mappedUser);
+      return { user: mappedUser, isNew };
+    } finally {
+      setSigningIn(false);
+    }
+  };
+
+  const signOut = async () => {
+    if (DEMO_MODE) {
+      setUser(null);
+      return;
+    }
+    try {
+      const { GoogleSignin } = await import(
+        "@react-native-google-signin/google-signin"
+      );
+      const { auth } = await import("@/lib/firebase");
+      const { signOut: fbSignOut } = await import("firebase/auth");
+      await GoogleSignin.signOut().catch(() => {});
+      await fbSignOut(auth);
+    } catch {}
+  };
+
+  return { user, loading, signingIn, isAuthenticated: !!user, signInWithGoogle, signOut };
 }

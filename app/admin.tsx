@@ -20,9 +20,19 @@ interface Order {
   status: "pending" | "processing" | "done" | "cancelled";
   gift_code: string | null;
   client_name: string | null;
+  client_email: string | null;
+  client_city: string | null;
+  details: Record<string, string> | null;
   push_token: string | null;
   created_at: string;
 }
+
+const DETAILS_LABELS: Record<string, string> = {
+  card: "Carte", clientId: "ID Client", wallet: "Wallet", cryptoType: "Crypto",
+  paypalEmail: "Email PayPal", operator: "Opérateur", momoNumber: "N° MoMo",
+  couponType: "Type coupon", amount: "Montant estimé", txHash: "Hash TX",
+  walletNetwork: "Réseau",
+};
 
 const TYPE_INFO: Record<string, { icon: string; label: string; color: string }> = {
   achat:          { icon: "🎮", label: "Achat carte cadeau", color: "#C9A84C" },
@@ -258,8 +268,13 @@ export default function AdminScreen() {
 
                 <Text style={styles.cardSummary} numberOfLines={2}>{item.summary}</Text>
 
-                {item.client_name && (
-                  <Text style={styles.cardClient}>👤 {item.client_name}</Text>
+                {(item.client_name || item.client_city) && (
+                  <Text style={styles.cardClient}>
+                    👤 {item.client_name ?? "—"}{item.client_city ? `  📍 ${item.client_city}` : ""}
+                  </Text>
+                )}
+                {item.client_email && (
+                  <Text style={styles.cardEmail}>✉️ {item.client_email}</Text>
                 )}
 
                 <View style={styles.cardBottom}>
@@ -335,6 +350,18 @@ export default function AdminScreen() {
                       <Text style={styles.detailVal}>{selected.client_name}</Text>
                     </View>
                   )}
+                  {selected.client_email && (
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailKey}>Email</Text>
+                      <Text style={[styles.detailVal, { color: "#60A5FA" }]}>{selected.client_email}</Text>
+                    </View>
+                  )}
+                  {selected.client_city && (
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailKey}>Ville</Text>
+                      <Text style={styles.detailVal}>📍 {selected.client_city}</Text>
+                    </View>
+                  )}
                   <View style={styles.detailRow}>
                     <Text style={styles.detailKey}>Date</Text>
                     <Text style={styles.detailVal}>
@@ -345,6 +372,23 @@ export default function AdminScreen() {
                     </Text>
                   </View>
                 </View>
+
+                {/* Détails formulaire client */}
+                {selected.details && Object.keys(selected.details).filter(k => k !== "type").length > 0 && (
+                  <>
+                    <Text style={styles.sheetLabel}>INFORMATIONS CLIENT</Text>
+                    <View style={styles.detailBox}>
+                      {Object.entries(selected.details)
+                        .filter(([k]) => k !== "type")
+                        .map(([k, v]) => v ? (
+                          <View key={k} style={styles.detailRow}>
+                            <Text style={styles.detailKey}>{DETAILS_LABELS[k] ?? k}</Text>
+                            <Text style={[styles.detailVal, { fontFamily: "monospace", fontSize: 12 }]} selectable>{v}</Text>
+                          </View>
+                        ) : null)}
+                    </View>
+                  </>
+                )}
 
                 {/* Code / Référence */}
                 <Text style={styles.sheetLabel}>CODE / RÉFÉRENCE</Text>
@@ -480,6 +524,7 @@ const styles = StyleSheet.create({
   cardType: { fontSize: 13, fontWeight: "700" },
   cardSummary: { fontSize: 13, color: colors.text.secondary, lineHeight: 19 },
   cardClient: { fontSize: 12, color: colors.text.muted },
+  cardEmail:  { fontSize: 11, color: "#60A5FA" },
   cardBottom: { flexDirection: "row", alignItems: "center", gap: 10, flexWrap: "wrap" },
   cardTotal: { fontSize: 15, fontWeight: "900", color: colors.brand.gold },
   cardPayment: { fontSize: 11, color: colors.text.muted, fontWeight: "600" },

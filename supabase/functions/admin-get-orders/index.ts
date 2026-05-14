@@ -24,7 +24,7 @@ serve(async (req) => {
 
     let query = supabase
       .from("orders")
-      .select("id, type, summary, total, payment_method, status, gift_code, client_name, push_token, created_at")
+      .select("id, type, summary, total, payment_method, status, gift_code, client_name, client_email, client_city, details, push_token, created_at")
       .order("created_at", { ascending: false })
       .range(page * 20, page * 20 + 19);
 

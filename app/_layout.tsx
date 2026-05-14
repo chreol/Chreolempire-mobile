@@ -40,6 +40,7 @@ export default function RootLayout() {
           <Stack.Screen name="services/factures" options={{ animation: "slide_from_right" }} />
           <Stack.Screen name="terms" options={{ animation: "slide_from_right" }} />
           <Stack.Screen name="sitemap" options={{ animation: "slide_from_right" }} />
+          <Stack.Screen name="admin" options={{ animation: "slide_from_bottom" }} />
         </Stack>
         <FloatingWaBot />
       </CartProvider>

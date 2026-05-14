@@ -21,7 +21,7 @@ export interface HistoryEntry {
 
 interface HistoryContextType {
   history: HistoryEntry[];
-  addEntry: (entry: Omit<HistoryEntry, "id" | "date" | "status" | "giftCode">, email?: string) => Promise<void>;
+  addEntry: (entry: Omit<HistoryEntry, "id" | "date" | "status" | "giftCode">, email?: string, details?: Record<string, string> | null) => Promise<void>;
   updateStatus: (id: string, status: OrderStatus) => Promise<void>;
   clearHistory: () => Promise<void>;
 }
@@ -125,7 +125,7 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
   };
 
-  const addEntry = useCallback(async (entry: Omit<HistoryEntry, "id" | "date" | "status" | "giftCode">, email?: string) => {
+  const addEntry = useCallback(async (entry: Omit<HistoryEntry, "id" | "date" | "status" | "giftCode">, email?: string, details?: Record<string, string> | null) => {
     const token = await getPushToken();
     const newEntry: HistoryEntry = {
       ...entry,
@@ -143,6 +143,10 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
 
     // Sync vers Supabase + email de confirmation (silencieux si hors ligne)
     try {
+      const profileRaw0 = await AsyncStorage.getItem("@chreolempire_profile_v1");
+      const profile0 = profileRaw0 ? JSON.parse(profileRaw0) : null;
+      const confirmEmail = email?.trim() || profile0?.email?.trim();
+
       await supabase.from("orders").insert({
         id: newEntry.id,
         type: newEntry.type,
@@ -152,18 +156,17 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
         item_count: newEntry.itemCount,
         status: "pending",
         push_token: token,
+        client_name: (details as any)?.name?.trim() || profile0?.name?.trim() || null,
+        client_email: confirmEmail || null,
+        client_city: profile0?.city?.trim() || null,
+        details: details ?? null,
       });
-
-      // Préférer l'email passé en paramètre, sinon lire depuis le profil
-      const profileRaw = await AsyncStorage.getItem("@chreolempire_profile_v1");
-      const profile = profileRaw ? JSON.parse(profileRaw) : null;
-      const confirmEmail = email?.trim() || profile?.email?.trim();
 
       if (confirmEmail) {
         supabase.functions.invoke("send-order-email", {
           body: {
             email: confirmEmail,
-            name: profile?.name?.trim(),
+            name: profile0?.name?.trim(),
             orderId: newEntry.id,
             type: newEntry.type,
             summary: newEntry.summary,
