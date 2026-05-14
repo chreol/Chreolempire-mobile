@@ -80,7 +80,6 @@ export default function UbaScreen() {
       cardName: `Recharge UBA — ${cardFirst6}••••${cardLast4}, Nom complet:  (${fullName}), ID Client (${clientId}), Téléphone: (${phone})`,
       amount: `Montant à recharger: ${numAmount.toLocaleString("fr-FR")} FCFA`, 
       price: total,
-      qty: 1,
     });
 
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -105,7 +104,6 @@ export default function UbaScreen() {
       cardName: `Carte Visa UBA Prépayée — Segment ${card.segment}`,
       amount: `Limite ${card.limit}`,
       price: card.price,
-      qty: 1,
     });
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     Alert.alert(

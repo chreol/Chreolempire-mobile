@@ -56,7 +56,7 @@ type NumType = "phone" | "decoder";
 const COMMISSION = 200;
 
 // ── Composant logo (image ou badge coloré) ─────────────────────
-function Logo({ src, size = 48 }: { src: ReturnType<typeof require>; size?: number }) {
+function Logo({ src, size = 48 }: { src: any; size?: number }) {
   return <Image source={src} style={{ width: size, height: size, borderRadius: 8 }} contentFit="contain" />;
 }
 

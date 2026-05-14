@@ -78,7 +78,6 @@ export default function PaypalScreen() {
       cardName: `Achat solde PayPal — ${numBuy}€ → Compte : ${paypalId}`,
       amount:   `${numBuy}€ → vous payez ${fcfaBuy.toLocaleString("fr-FR")} FCFA`,
       price:    fcfaBuy,
-      qty:      1,
     });
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     Alert.alert(
@@ -105,7 +104,6 @@ export default function PaypalScreen() {
       cardName: `Vente PayPal — ${numSell}€ → Bénéficiaire : ${benefName} (${momoLabel} +237${phone})`,
       amount:   `${numSell}€ → vous recevez ${fcfaSell.toLocaleString("fr-FR")} FCFA`,
       price:    fcfaSell,
-      qty:      1,
     });
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     Alert.alert(
@@ -400,7 +398,7 @@ export default function PaypalScreen() {
               transition={{ type: "timing", duration: 220 }}
               style={styles.howBody}
             >
-              {direction === "buy" ? [
+              {(direction === "buy" ? [
                 { n: "1", text: "Entrez le montant en € et votre email/pseudo PayPal." },
                 { n: "2", text: "Ajoutez au panier et soumettez votre commande." },
                 { n: "3", text: "Payez via Mobile Money (MTN ou Orange) selon les instructions." },
@@ -410,7 +408,7 @@ export default function PaypalScreen() {
                 { n: "2", text: "Envoyez le solde PayPal à notre adresse en tant que Famille/Proche." },
                 { n: "3", text: "Soumettez la demande sur WhatsApp avec la capture du paiement." },
                 { n: "4", text: "Le virement Mobile Money est effectué après vérification ✅" },
-              ].map(s => (
+              ]).map(s => (
                 <View key={s.n} style={styles.howStep}>
                   <View style={styles.howStepNum}>
                     <Text style={styles.howStepNumText}>{s.n}</Text>

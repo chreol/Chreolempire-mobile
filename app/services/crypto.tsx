@@ -146,7 +146,6 @@ export default function CryptoScreen() {
       cardName: `Vente ${crypto.name} — ${numUsd}$ via ${selectedNetworkKey} — Hash: ${txHash} — Bénéficiaire : ${benefName} (${momoLabel} +237${phone})`,
       amount:   `${numUsd}$ → ${fcfaSell.toLocaleString("fr-FR")} FCFA`,
       price:    fcfaSell,
-      qty:      1,
     });
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     Alert.alert(
@@ -171,7 +170,6 @@ export default function CryptoScreen() {
       cardName: `Achat ${crypto.name} — ${numBuyUsd}$ → Wallet : ${walletAddr.slice(0, 16)}... (${walletNetwork})`,
       amount:   `${numBuyUsd}$ → ${fcfaBuy.toLocaleString("fr-FR")} FCFA`,
       price:    fcfaBuy,
-      qty:      1,
     });
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     Alert.alert(

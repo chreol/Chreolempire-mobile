@@ -86,7 +86,6 @@ export default function CouponsScreen() {
       cardName: `Échange ${typeLabel} - Code : ${couponCode} — Bénéficiaire : ${benefName} (${networkLabel} - Téléphone : +237${phone}),`, 
       amount: `Valeur d'échange : ${numEuro}€ → Montant à verser : ${fcfa.toLocaleString("fr-FR")} FCFA`,
       price: fcfa,
-      qty: 1, 
     });
 
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
