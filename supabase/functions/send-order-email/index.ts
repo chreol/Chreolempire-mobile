@@ -1,156 +1,132 @@
-import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")!;
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const RESEND_KEY = Deno.env.get("RESEND_API_KEY")!;
+const CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
 
-interface OrderPayload {
-  type: "UPDATE";
-  table: string;
-  record: {
-    id: string;
-    user_email: string;
-    product_name: string;
-    amount_label: string;
-    amount_fcfa: number;
-    payment_method: string;
-    status: string;
-    code?: string;
-    created_at: string;
-  };
-  old_record: { status: string };
-}
-
-function buildEmailHtml(order: OrderPayload["record"]): string {
-  const paymentLabel: Record<string, string> = {
-    orange_money: "Orange Money",
-    mtn_momo: "MTN MoMo",
-    crypto: "Crypto (USDT)",
-    paypal: "PayPal",
-  };
-
-  return `
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <style>
-    body { font-family: -apple-system, 'Helvetica Neue', sans-serif; background: #0A0B0F; color: #fff; margin: 0; padding: 0; }
-    .container { max-width: 520px; margin: 0 auto; padding: 32px 24px; }
-    .logo { background: #2563EB; border-radius: 16px; width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 900; color: #fff; margin-bottom: 24px; }
-    .title { font-size: 24px; font-weight: 800; margin-bottom: 8px; letter-spacing: -0.5px; }
-    .subtitle { color: #9CA3AF; font-size: 15px; margin-bottom: 32px; line-height: 22px; }
-    .card { background: #1A1B25; border-radius: 20px; padding: 24px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.08); }
-    .card-title { font-size: 11px; font-weight: 700; color: #4B5563; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; }
-    .row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
-    .row:last-child { border-bottom: none; }
-    .row-label { color: #9CA3AF; font-size: 14px; }
-    .row-value { font-weight: 600; font-size: 14px; color: #fff; }
-    .code-box { background: rgba(16,185,129,0.12); border: 1.5px dashed rgba(16,185,129,0.5); border-radius: 14px; padding: 20px; text-align: center; margin-bottom: 20px; }
-    .code-label { font-size: 12px; color: #9CA3AF; margin-bottom: 8px; }
-    .code { font-size: 28px; font-weight: 900; color: #10B981; letter-spacing: 4px; font-family: monospace; }
-    .price-badge { color: #FACC15; font-size: 16px; font-weight: 800; }
-    .footer { color: #4B5563; font-size: 12px; text-align: center; margin-top: 32px; line-height: 18px; }
-    .ref { font-size: 11px; color: #4B5563; font-family: monospace; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="logo">CE</div>
-
-    <div class="title">✅ Code livré !</div>
-    <div class="subtitle">
-      Votre commande <strong style="color:#fff">${order.product_name}</strong> a été traitée avec succès.
-      Retrouvez votre code ci-dessous.
-    </div>
-
-    ${order.code ? `
-    <div class="code-box">
-      <div class="code-label">🔑 Votre code d'activation</div>
-      <div class="code">${order.code}</div>
-    </div>
-    ` : ""}
-
-    <div class="card">
-      <div class="card-title">Détails de la commande</div>
-      <div class="row">
-        <span class="row-label">Produit</span>
-        <span class="row-value">${order.product_name}</span>
-      </div>
-      <div class="row">
-        <span class="row-label">Montant</span>
-        <span class="row-value">${order.amount_label}</span>
-      </div>
-      <div class="row">
-        <span class="row-label">Total payé</span>
-        <span class="price-badge">${order.amount_fcfa.toLocaleString("fr-FR")} FCFA</span>
-      </div>
-      <div class="row">
-        <span class="row-label">Paiement</span>
-        <span class="row-value">${paymentLabel[order.payment_method] ?? order.payment_method}</span>
-      </div>
-      <div class="row">
-        <span class="row-label">Date</span>
-        <span class="row-value">${new Date(order.created_at).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
-      </div>
-    </div>
-
-    <div class="footer">
-      Merci de faire confiance à <strong>Chreol Empire 🇨🇲</strong><br>
-      Pour toute question, contactez-nous sur WhatsApp : +237 697 657 734<br><br>
-      <span class="ref">Réf: #${order.id.slice(0, 8).toUpperCase()}</span>
-    </div>
-  </div>
-</body>
-</html>
-  `.trim();
-}
+const TYPE_LABELS: Record<string, string> = {
+  achat: "Achat carte cadeau",
+  coupon: "Échange coupon",
+  "crypto-sell": "Vente crypto",
+  "paypal-sell": "Vente PayPal",
+  mixte: "Demande mixte",
+};
 
 serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
+
   try {
-    const payload: OrderPayload = await req.json();
+    const { email, name, orderId, type, summary, total, paymentMethod } = await req.json();
+    if (!email) return new Response("missing email", { status: 400 });
 
-    // Only trigger when status changes TO "delivered"
-    if (
-      payload.type !== "UPDATE" ||
-      payload.record.status !== "delivered" ||
-      payload.old_record.status === "delivered"
-    ) {
-      return new Response(JSON.stringify({ skipped: true }), { status: 200 });
-    }
+    const firstName = name?.trim() || "cher client";
+    const typeLabel = TYPE_LABELS[type] ?? type;
+    const isSell = ["coupon", "crypto-sell", "paypal-sell"].includes(type);
+    const totalLabel = isSell ? "À recevoir" : "Total à payer";
+    const dateStr = new Date().toLocaleDateString("fr-FR", {
+      day: "2-digit", month: "long", year: "numeric",
+      hour: "2-digit", minute: "2-digit",
+    });
 
-    const order = payload.record;
+    const html = `<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><title>Confirmation de commande — Chreol Empire</title></head>
+<body style="margin:0;padding:0;background:#0A0B0F;font-family:Arial,sans-serif;">
+<div style="max-width:580px;margin:0 auto;padding:32px 16px;">
 
-    // Send email via Resend
-    const emailRes = await fetch("https://api.resend.com/emails", {
+  <div style="text-align:center;margin-bottom:24px;">
+    <div style="font-size:48px;">${isSell ? "🔄" : "✅"}</div>
+    <h1 style="color:#C9A84C;font-size:20px;font-weight:900;margin:12px 0 4px;">Chreol Empire</h1>
+    <p style="color:#666;font-size:13px;margin:0;">Confirmation de commande</p>
+  </div>
+
+  <div style="background:#141519;border-radius:16px;border:1px solid #2A2B30;padding:28px;margin-bottom:16px;">
+    <h2 style="color:#FFFFFF;font-size:18px;margin:0 0 6px;">
+      ${isSell ? "Demande reçue !" : "Commande confirmée !"} ${firstName}
+    </h2>
+    <p style="color:#666;font-size:12px;margin:0 0 20px;">📅 ${dateStr}</p>
+
+    <div style="background:#0A0B0F;border-radius:12px;padding:16px;margin-bottom:16px;">
+      <p style="color:#C9A84C;font-size:11px;font-weight:700;text-transform:uppercase;margin:0 0 12px;">Détails de la commande</p>
+
+      <table style="width:100%;border-collapse:collapse;">
+        <tr>
+          <td style="color:#666;font-size:12px;padding:6px 0;">Type</td>
+          <td style="color:#FFFFFF;font-size:12px;font-weight:700;text-align:right;">${typeLabel}</td>
+        </tr>
+        <tr>
+          <td style="color:#666;font-size:12px;padding:6px 0;">Détails</td>
+          <td style="color:#AAAAAA;font-size:12px;text-align:right;">${summary}</td>
+        </tr>
+        ${paymentMethod ? `
+        <tr>
+          <td style="color:#666;font-size:12px;padding:6px 0;">Paiement</td>
+          <td style="color:#FFFFFF;font-size:12px;font-weight:700;text-align:right;">💳 ${paymentMethod}</td>
+        </tr>` : ""}
+        <tr style="border-top:1px solid #2A2B30;">
+          <td style="color:#AAAAAA;font-size:13px;font-weight:700;padding:10px 0 0;">${totalLabel}</td>
+          <td style="color:${isSell ? "#25D366" : "#C9A84C"};font-size:18px;font-weight:900;text-align:right;padding:10px 0 0;">
+            ${Number(total).toLocaleString("fr-FR")} FCFA
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    ${!isSell ? `
+    <div style="background:#1A2A1A;border-radius:12px;border:1px solid #25D36644;padding:14px;margin-bottom:16px;">
+      <p style="color:#25D366;font-size:13px;font-weight:700;margin:0 0 4px;">⏱️ Délai de livraison : 15 à 30 minutes</p>
+      <p style="color:#7DCF9F;font-size:12px;margin:0;">
+        Après confirmation de votre paiement, notre équipe vous enverra votre code sur WhatsApp et dans l'application.
+      </p>
+    </div>` : `
+    <div style="background:#0D1A2A;border-radius:12px;border:1px solid #3B82F644;padding:14px;margin-bottom:16px;">
+      <p style="color:#60A5FA;font-size:13px;font-weight:700;margin:0 0 4px;">📸 Envoyez votre preuve</p>
+      <p style="color:#93C5FD;font-size:12px;margin:0;">
+        Envoyez la photo ou capture d'écran de votre coupon/crypto/PayPal sur WhatsApp pour déclencher le traitement.
+      </p>
+    </div>`}
+
+    <div style="text-align:center;padding:14px;background:#141519;border-radius:12px;border:1px solid #25D36633;">
+      <p style="color:#AAAAAA;font-size:13px;margin:0 0 8px;">Une question ? Contactez-nous directement</p>
+      <a href="https://wa.me/+237697657734" style="display:inline-block;background:#25D366;color:#FFFFFF;font-size:14px;font-weight:800;text-decoration:none;padding:10px 24px;border-radius:100px;">
+        💬 WhatsApp +237 697 657 734
+      </a>
+    </div>
+  </div>
+
+  <div style="text-align:center;padding-top:20px;border-top:1px solid #1A1B20;">
+    <p style="color:#444;font-size:12px;margin:0 0 6px;">Chreol Empire · Vallée 3, Boutiques Deido, Douala, Cameroun</p>
+    <p style="color:#444;font-size:12px;margin:0;">
+      <a href="https://chreolempire.com" style="color:#C9A84C;text-decoration:none;">chreolempire.com</a>
+    </p>
+  </div>
+
+</div>
+</body>
+</html>`;
+
+    const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${RESEND_API_KEY}`,
-        "Content-Type": "application/json",
-      },
+      headers: { "Authorization": `Bearer ${RESEND_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        from: "Chreol Empire <noreply@chreolempire.com>",
-        to: [order.user_email],
-        subject: `✅ Votre code ${order.product_name} est prêt !`,
-        html: buildEmailHtml(order),
+        from: "Chreol Empire <no-reply@chreolempire.com>",
+        to: [email],
+        subject: `${isSell ? "🔄" : "✅"} Commande confirmée — Chreol Empire`,
+        html,
       }),
     });
 
-    if (!emailRes.ok) {
-      const errText = await emailRes.text();
-      throw new Error(`Resend error: ${errText}`);
-    }
-
-    return new Response(JSON.stringify({ success: true }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
+    const data = await res.json();
+    return new Response(JSON.stringify(data), {
+      headers: { ...CORS, "Content-Type": "application/json" },
+      status: res.ok ? 200 : 400,
     });
-  } catch (error) {
-    console.error("send-order-email error:", error);
-    return new Response(JSON.stringify({ error: String(error) }), {
+  } catch (err) {
+    return new Response(JSON.stringify({ error: String(err) }), {
+      headers: { ...CORS, "Content-Type": "application/json" },
       status: 500,
-      headers: { "Content-Type": "application/json" },
     });
   }
 });

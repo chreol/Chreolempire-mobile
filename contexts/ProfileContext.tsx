@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { supabase } from "@/lib/supabase";
 
 const STORAGE_KEY = "@chreolempire_profile_v1";
 
@@ -47,6 +48,12 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
 
   const saveProfile = async (data: Omit<Profile, "hasProfile">) => {
     await persist({ ...data, hasProfile: true });
+    // Email de bienvenue si l'utilisateur a renseigné son email
+    if (data.email?.trim()) {
+      supabase.functions.invoke("send-welcome-email", {
+        body: { email: data.email.trim(), name: data.name?.trim() },
+      }).catch(() => { /* silencieux si hors ligne */ });
+    }
   };
 
   const updateEmail = async (email: string) => {

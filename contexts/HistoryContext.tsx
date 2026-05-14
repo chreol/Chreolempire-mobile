@@ -141,7 +141,7 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
       return updated;
     });
 
-    // Sync vers Supabase (silencieux si hors ligne)
+    // Sync vers Supabase + email de confirmation (silencieux si hors ligne)
     try {
       await supabase.from("orders").insert({
         id: newEntry.id,
@@ -153,6 +153,25 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
         status: "pending",
         push_token: token,
       });
+
+      // Email de confirmation si le profil a un email
+      const profileRaw = await AsyncStorage.getItem("@chreolempire_profile_v1");
+      if (profileRaw) {
+        const profile = JSON.parse(profileRaw);
+        if (profile?.email?.trim()) {
+          supabase.functions.invoke("send-order-email", {
+            body: {
+              email: profile.email.trim(),
+              name: profile.name?.trim(),
+              orderId: newEntry.id,
+              type: newEntry.type,
+              summary: newEntry.summary,
+              total: newEntry.total,
+              paymentMethod: newEntry.paymentMethod,
+            },
+          }).catch(() => { /* silencieux si hors ligne */ });
+        }
+      }
     } catch { /* hors ligne — l'ordre est sauvegardé localement */ }
   }, []);
 
