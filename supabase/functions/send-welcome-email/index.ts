@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const RESEND_KEY = Deno.env.get("RESEND_API_KEY")!;
+const BREVO_KEY = Deno.env.get("BREVO_API_KEY")!;
 const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -53,6 +53,14 @@ serve(async (req) => {
     <p style="color:#888;font-size:12px;margin:0;">Gagnez des tampons à chaque commande et obtenez des réductions exclusives.</p>
   </div>
 
+  <div style="background:#0A1200;border-radius:16px;border:1px solid #25D36633;padding:18px;margin-bottom:16px;text-align:center;">
+    <p style="color:#FFFFFF;font-size:14px;font-weight:800;margin:0 0 6px;">⭐ Satisfait de nos services ?</p>
+    <p style="color:#AAAAAA;font-size:12px;margin:0 0 14px;">Laissez-nous un avis sur Google Maps — cela nous aide énormément !</p>
+    <a href="https://www.google.com/maps/search/?api=1&query=Chreol+Empire+Douala+Cameroun" style="display:inline-block;background:#4285F4;color:#FFFFFF;font-size:13px;font-weight:800;text-decoration:none;padding:10px 22px;border-radius:100px;">
+      🗺️ Laisser un avis Google
+    </a>
+  </div>
+
   <div style="text-align:center;padding-top:20px;border-top:1px solid #1A1B20;">
     <p style="color:#444;font-size:12px;margin:0 0 6px;">Chreol Empire · Vallée 3, Boutiques Deido, Douala, Cameroun</p>
     <p style="color:#444;font-size:12px;margin:0;">
@@ -65,14 +73,14 @@ serve(async (req) => {
 </body>
 </html>`;
 
-    const res = await fetch("https://api.resend.com/emails", {
+    const res = await fetch("https://api.brevo.com/v3/smtp/email", {
       method: "POST",
-      headers: { "Authorization": `Bearer ${RESEND_KEY}`, "Content-Type": "application/json" },
+      headers: { "api-key": BREVO_KEY, "Content-Type": "application/json" },
       body: JSON.stringify({
-        from: "Chreol Empire <no-reply@chreolempire.com>",
-        to: [email],
+        sender: { name: "Chreol Empire", email: "chreolempire00@gmail.com" },
+        to: [{ email, name: name?.trim() || "client" }],
         subject: `👑 Bienvenue chez Chreol Empire, ${firstName} !`,
-        html,
+        htmlContent: html,
       }),
     });
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   Linking, Alert, Clipboard, TextInput, KeyboardAvoidingView, Platform,
@@ -14,6 +14,7 @@ import { useCart, CartItem } from "@/contexts/CartContext";
 import { useHistory, OrderType } from "@/contexts/HistoryContext";
 import { useLoyalty } from "@/contexts/LoyaltyContext";
 import { scheduleOrderNotification } from "@/hooks/usePushNotifications";
+import { useProfile } from "@/contexts/ProfileContext";
 import * as StoreReview from "expo-store-review";
 
 const IMG_NEERO = require("../assets/Neero paiement @blondelccde.webp");
@@ -214,8 +215,13 @@ export default function CartScreen() {
   const { items, updateQty, removeItem, clearCart, total, count } = useCart();
   const { addEntry, history } = useHistory();
   const { addStamp } = useLoyalty();
+  const { profile } = useProfile();
   const [payment, setPayment] = useState<PaymentId>("mtn");
   const [deliveryEmail, setDeliveryEmail] = useState("");
+
+  useEffect(() => {
+    if (profile.email) setDeliveryEmail(prev => prev || profile.email);
+  }, [profile.email]);
 
   const selectedMethod = PAYMENT_METHODS.find(m => m.id === payment)!;
 
@@ -316,6 +322,16 @@ export default function CartScreen() {
 
   const handleOrder = async () => {
     if (items.length === 0) return;
+
+    if (!deliveryEmail.trim() || !deliveryEmail.includes("@")) {
+      Alert.alert(
+        "Email requis",
+        "Veuillez saisir une adresse email valide pour recevoir la confirmation de votre commande.",
+        [{ text: "OK" }]
+      );
+      return;
+    }
+
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
     // Déterminer le type pour l'historique
@@ -339,7 +355,7 @@ export default function CartScreen() {
       total: effectiveTotal,
       paymentMethod: !allCoupons ? selectedMethod.label : undefined,
       itemCount: effectiveItems.reduce((s, i) => s + i.qty, 0),
-    });
+    }, deliveryEmail.trim());
 
     Linking.openURL(`https://wa.me/${CONTACT.whatsapp}?text=${encodeURIComponent(buildWhatsAppMsg())}`);
     scheduleOrderNotification("submitted", summary);
@@ -480,26 +496,6 @@ export default function CartScreen() {
               <PaymentInstructions id={payment} total={regularTotal} />
             </MotiView>
 
-            <View style={styles.emailSection}>
-              <Text style={styles.sectionLabel}>Livraison par email (optionnel)</Text>
-              <View style={styles.emailRow}>
-                <Text style={styles.emailIcon}>📧</Text>
-                <TextInput
-                  style={styles.emailInput}
-                  value={deliveryEmail}
-                  onChangeText={setDeliveryEmail}
-                  placeholder="votre@email.com"
-                  placeholderTextColor={colors.text.muted}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  returnKeyType="done"
-                />
-              </View>
-              <Text style={styles.emailNote}>
-                Renseignez votre adresse email si vous souhaitez recevoir vos codes par email (en plus de WhatsApp)
-              </Text>
-            </View>
-
             <View style={styles.proofBox}>
               <Text style={styles.proofTitle}>📸 Preuve de paiement obligatoire</Text>
               <Text style={styles.proofText}>
@@ -528,6 +524,27 @@ export default function CartScreen() {
             </Text>
           </View>
         )}
+
+        {/* Email de confirmation — obligatoire pour tous les types de commande */}
+        <View style={styles.emailSection}>
+          <Text style={styles.sectionLabel}>Email de confirmation *</Text>
+          <View style={styles.emailRow}>
+            <Text style={styles.emailIcon}>📧</Text>
+            <TextInput
+              style={styles.emailInput}
+              value={deliveryEmail}
+              onChangeText={setDeliveryEmail}
+              placeholder="votre@email.com"
+              placeholderTextColor={colors.text.muted}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              returnKeyType="done"
+            />
+          </View>
+          <Text style={styles.emailNote}>
+            Obligatoire — vous recevrez la confirmation de commande et votre code par email
+          </Text>
+        </View>
 
         {/* Warning */}
         <View style={styles.warningBox}>

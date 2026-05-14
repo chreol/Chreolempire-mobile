@@ -21,7 +21,7 @@ export interface HistoryEntry {
 
 interface HistoryContextType {
   history: HistoryEntry[];
-  addEntry: (entry: Omit<HistoryEntry, "id" | "date" | "status" | "giftCode">) => Promise<void>;
+  addEntry: (entry: Omit<HistoryEntry, "id" | "date" | "status" | "giftCode">, email?: string) => Promise<void>;
   updateStatus: (id: string, status: OrderStatus) => Promise<void>;
   clearHistory: () => Promise<void>;
 }
@@ -125,7 +125,7 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
   };
 
-  const addEntry = useCallback(async (entry: Omit<HistoryEntry, "id" | "date" | "status" | "giftCode">) => {
+  const addEntry = useCallback(async (entry: Omit<HistoryEntry, "id" | "date" | "status" | "giftCode">, email?: string) => {
     const token = await getPushToken();
     const newEntry: HistoryEntry = {
       ...entry,
@@ -154,23 +154,23 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
         push_token: token,
       });
 
-      // Email de confirmation si le profil a un email
+      // Préférer l'email passé en paramètre, sinon lire depuis le profil
       const profileRaw = await AsyncStorage.getItem("@chreolempire_profile_v1");
-      if (profileRaw) {
-        const profile = JSON.parse(profileRaw);
-        if (profile?.email?.trim()) {
-          supabase.functions.invoke("send-order-email", {
-            body: {
-              email: profile.email.trim(),
-              name: profile.name?.trim(),
-              orderId: newEntry.id,
-              type: newEntry.type,
-              summary: newEntry.summary,
-              total: newEntry.total,
-              paymentMethod: newEntry.paymentMethod,
-            },
-          }).catch(() => { /* silencieux si hors ligne */ });
-        }
+      const profile = profileRaw ? JSON.parse(profileRaw) : null;
+      const confirmEmail = email?.trim() || profile?.email?.trim();
+
+      if (confirmEmail) {
+        supabase.functions.invoke("send-order-email", {
+          body: {
+            email: confirmEmail,
+            name: profile?.name?.trim(),
+            orderId: newEntry.id,
+            type: newEntry.type,
+            summary: newEntry.summary,
+            total: newEntry.total,
+            paymentMethod: newEntry.paymentMethod,
+          },
+        }).catch(() => { /* silencieux si hors ligne */ });
       }
     } catch { /* hors ligne — l'ordre est sauvegardé localement */ }
   }, []);
