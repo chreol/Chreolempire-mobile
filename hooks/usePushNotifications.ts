@@ -2,8 +2,9 @@ import { useEffect, useRef } from "react";
 import * as Notifications from "expo-notifications";
 import Constants from "expo-constants";
 import { Platform } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// Remote push tokens removed from Expo Go since SDK 53 — local notifications still work
+const PUSH_TOKEN_KEY = "@chreolempire_push_token";
 const isExpoGo = Constants.appOwnership === "expo";
 
 Notifications.setNotificationHandler({
@@ -16,7 +17,38 @@ Notifications.setNotificationHandler({
   }),
 });
 
-export async function scheduleOrderNotification(type: "submitted" | "processing" | "done", detail?: string) {
+// Récupère le push token (depuis le cache ou Expo)
+export async function getPushToken(): Promise<string | null> {
+  try {
+    // En Expo Go on ne peut pas obtenir de vrai token push — on utilise un ID appareil
+    const cached = await AsyncStorage.getItem(PUSH_TOKEN_KEY);
+    if (cached) return cached;
+
+    if (isExpoGo) {
+      // Fallback : ID unique basé sur l'installation
+      const fallback = `device-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      await AsyncStorage.setItem(PUSH_TOKEN_KEY, fallback);
+      return fallback;
+    }
+
+    const { status } = await Notifications.getPermissionsAsync();
+    if (status !== "granted") return null;
+
+    const tokenData = await Notifications.getExpoPushTokenAsync({
+      projectId: Constants.expoConfig?.extra?.eas?.projectId,
+    });
+    const token = tokenData.data;
+    await AsyncStorage.setItem(PUSH_TOKEN_KEY, token);
+    return token;
+  } catch {
+    return null;
+  }
+}
+
+export async function scheduleOrderNotification(
+  type: "submitted" | "processing" | "done",
+  detail?: string
+) {
   const messages = {
     submitted: {
       title: "✅ Commande reçue !",
@@ -27,8 +59,10 @@ export async function scheduleOrderNotification(type: "submitted" | "processing"
       body: "Votre commande est en cours de vérification par notre équipe.",
     },
     done: {
-      title: "🎉 Commande traitée !",
-      body: detail ? `Votre commande ${detail} a été traitée avec succès.` : "Votre commande a été livrée !",
+      title: "🎉 Commande livrée !",
+      body: detail
+        ? `Votre code est disponible : ${detail}`
+        : "Votre commande a été livrée avec succès !",
     },
   };
 
@@ -67,14 +101,11 @@ export function usePushNotifications() {
         });
       }
 
-      // Remote push token — only in standalone/dev builds, not Expo Go
-      if (!isExpoGo) {
-        await Notifications.getExpoPushTokenAsync();
-      }
+      // Initialise et met en cache le token
+      await getPushToken();
     })();
 
     listenerRef.current = Notifications.addNotificationReceivedListener(() => {});
-
     return () => { listenerRef.current?.remove(); };
   }, []);
 }

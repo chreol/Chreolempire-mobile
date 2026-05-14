@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, TouchableOpacity, FlatList,
   Alert, Linking, Modal,
 } from "react-native";
+import * as Clipboard from "expo-clipboard";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import { MotiView } from "moti";
@@ -137,9 +138,28 @@ function HistoryCard({
         <Text style={styles.payMethod}>💳 {entry.paymentMethod}</Text>
       )}
 
-      <TouchableOpacity style={styles.relancerBtn} onPress={handleRelancer} activeOpacity={0.8}>
-        <Text style={styles.relancerText}>🔁 Relancer la commande</Text>
-      </TouchableOpacity>
+      {/* Code cadeau livré */}
+      {entry.giftCode && (
+        <TouchableOpacity
+          style={styles.giftCodeBox}
+          onPress={async () => {
+            await Clipboard.setStringAsync(entry.giftCode!);
+            await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            Alert.alert("Copié !", `Code copié : ${entry.giftCode}`);
+          }}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.giftCodeLabel}>🎁 Votre code</Text>
+          <Text style={styles.giftCodeValue}>{entry.giftCode}</Text>
+          <Text style={styles.giftCodeCopy}>📋 Appuyez pour copier</Text>
+        </TouchableOpacity>
+      )}
+
+      {entry.status !== "done" && (
+        <TouchableOpacity style={styles.relancerBtn} onPress={handleRelancer} activeOpacity={0.8}>
+          <Text style={styles.relancerText}>🔁 Relancer la commande</Text>
+        </TouchableOpacity>
+      )}
     </MotiView>
   );
 }
@@ -261,6 +281,15 @@ const styles = StyleSheet.create({
     paddingVertical: 10, alignItems: "center", marginTop: 2,
   },
   relancerText: { fontSize: 13, fontWeight: "800", color: "#25D366" },
+
+  giftCodeBox: {
+    borderRadius: radius.xl, borderWidth: 1.5, borderColor: colors.brand.gold + "88",
+    backgroundColor: colors.brand.goldLight,
+    padding: 14, alignItems: "center", gap: 4,
+  },
+  giftCodeLabel: { fontSize: 11, fontWeight: "700", color: colors.brand.gold, textTransform: "uppercase", letterSpacing: 0.5 },
+  giftCodeValue: { fontSize: 20, fontWeight: "900", color: colors.brand.gold, letterSpacing: 2, fontVariant: ["tabular-nums"] },
+  giftCodeCopy: { fontSize: 11, color: colors.text.muted, marginTop: 2 },
 
   // Status modal
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" },
