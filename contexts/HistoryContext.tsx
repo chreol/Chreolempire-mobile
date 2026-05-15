@@ -5,7 +5,7 @@ import { scheduleOrderNotification, getPushToken } from "@/hooks/usePushNotifica
 import * as StoreReview from "expo-store-review";
 
 export type OrderType = "achat" | "coupon" | "crypto-sell" | "paypal-sell" | "mixte";
-export type OrderStatus = "pending" | "processing" | "done" | "cancelled";
+export type OrderStatus = "pending" | "processing" | "in_progress" | "done" | "cancelled";
 
 export interface HistoryEntry {
   id: string;
@@ -107,6 +107,8 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
           // Notification push locale selon le nouveau statut
           if (newStatus === "processing") {
             await scheduleOrderNotification("processing");
+          } else if (newStatus === "in_progress") {
+            await scheduleOrderNotification("in_progress");
           } else if (newStatus === "done") {
             await scheduleOrderNotification("done", giftCode ?? undefined);
             // Demande d'avis après 3 secondes

@@ -48,7 +48,7 @@ export async function getPushToken(): Promise<string | null> {
 }
 
 export async function scheduleOrderNotification(
-  type: "submitted" | "processing" | "done",
+  type: "submitted" | "processing" | "in_progress" | "done",
   detail?: string
 ) {
   if (!isNative) return;
@@ -58,8 +58,12 @@ export async function scheduleOrderNotification(
       body: `Merci pour votre commande${detail ? ` — ${detail}` : ""}. Elle est en cours de traitement.`,
     },
     processing: {
-      title: "⚙️ En traitement",
-      body: "Votre commande est en cours de vérification par notre équipe.",
+      title: "✅ Commande prise en charge",
+      body: "Notre équipe a bien reçu votre commande et la traite.",
+    },
+    in_progress: {
+      title: "⚙️ En cours de livraison",
+      body: "Votre commande est en cours de livraison. Vous recevrez votre code bientôt.",
     },
     done: {
       title: "🎉 Commande livrée !",

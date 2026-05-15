@@ -290,8 +290,6 @@ export default function CartScreen() {
   const [cbOp,   setCbOp]   = useState<"MTN" | "Orange">("MTN");
   const [cbName, setCbName] = useState("");
   const [cbPhone, setCbPhone] = useState("");
-  // Coupons
-  const [cpnAmount, setCpnAmount] = useState("");
 
   // ── Pré-remplissage depuis le profil ────────────────────────────────────
   useEffect(() => {
@@ -327,8 +325,7 @@ export default function CartScreen() {
       const lines = couponItems.map(i => `  • ${i.cardName}\n    ➜ ${i.amount}`).join("\n");
       const cpn0 = parseCouponCardName(couponItems[0]?.cardName ?? "");
       const momoLine = `📲 *Réception :* ${cpn0.operator} — +237${cpn0.phone}`;
-      const amtLine  = cpnAmount.trim() ? `💰 *Montant estimé :* ${cpnAmount.trim()} FCFA\n` : "";
-      msg += `🎟️ *DEMANDE D'ÉCHANGE COUPONS*\n${lines}\n\n${amtLine}${momoLine}\n👤 *Nom :* ${cpn0.benefName}${emailLine}\n\n📸 *Je vais vous envoyer ici la photo ou capture de mes coupons.*`;
+      msg += `🎟️ *DEMANDE D'ÉCHANGE COUPONS*\n${lines}\n\n${momoLine}\n👤 *Nom :* ${cpn0.benefName}${emailLine}\n\n📸 *Je vais vous envoyer ici la photo ou capture de mes coupons.*`;
     }
 
     // ── Vente crypto ──
@@ -409,7 +406,7 @@ export default function CartScreen() {
     if (couponItems.length > 0) {
       const d = parseCouponCardName(couponItems[0]?.cardName ?? "");
       const couponType = couponItems[0]?.cardId.replace("coupon-", "").toUpperCase() ?? "";
-      return { type: "coupon_exchange", couponType, amount: cpnAmount.trim(), operator: d.operator, momoNumber: d.phone, name: d.benefName };
+      return { type: "coupon_exchange", couponType, operator: d.operator, momoNumber: d.phone, name: d.benefName };
     }
     return null;
   };
@@ -436,10 +433,6 @@ export default function CartScreen() {
       if (!cbName.trim() || !cbPhone.trim()) { Alert.alert("Infos manquantes", "Nom et téléphone requis."); return; }
     }
 
-    // Coupons
-    if (couponItems.length > 0) {
-      if (!cpnAmount.trim()) { Alert.alert("Montant requis", "Veuillez indiquer le montant estimé de votre coupon."); return; }
-    }
 
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
@@ -717,8 +710,6 @@ export default function CartScreen() {
                 </View>
               );
             })}
-            <Text style={styles.formLabel}>Montant estimé (FCFA) *</Text>
-            <TextInput style={styles.formInput} value={cpnAmount} onChangeText={setCpnAmount} placeholder="ex: 44000" placeholderTextColor={colors.text.muted} keyboardType="numeric" />
           </View>
         )}
 

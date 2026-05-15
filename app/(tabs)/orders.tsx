@@ -20,13 +20,14 @@ const TYPE_CONFIG: Record<OrderType, { label: string; color: string; emoji: stri
 };
 
 const STATUS_CONFIG: Record<OrderStatus, { label: string; color: string; emoji: string }> = {
-  pending:    { label: "En attente",    color: "#F97316", emoji: "⏳" },
-  processing: { label: "En traitement", color: "#3B82F6", emoji: "🔄" },
-  done:       { label: "Terminé",       color: "#25D366", emoji: "✅" },
-  cancelled:  { label: "Annulé",        color: "#EF4444", emoji: "❌" },
+  pending:     { label: "En attente",    color: "#F97316", emoji: "⏳" },
+  processing:  { label: "Prise en charge", color: "#3B82F6", emoji: "✅" },
+  in_progress: { label: "En livraison", color: "#A78BFA", emoji: "⚙️" },
+  done:        { label: "Terminé",       color: "#25D366", emoji: "🎉" },
+  cancelled:   { label: "Annulé",        color: "#EF4444", emoji: "❌" },
 };
 
-const ALL_STATUSES: OrderStatus[] = ["pending", "processing", "done", "cancelled"];
+const ALL_STATUSES: OrderStatus[] = ["pending", "processing", "in_progress", "done", "cancelled"];
 
 function StatusModal({
   entry,

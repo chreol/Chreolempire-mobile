@@ -43,26 +43,29 @@ const TYPE_INFO: Record<string, { icon: string; label: string; color: string }> 
 };
 
 const STATUS_INFO: Record<string, { label: string; color: string; bg: string; emoji: string }> = {
-  pending:    { label: "En attente", color: "#9CA3AF", bg: "rgba(156,163,175,0.15)", emoji: "⏳" },
-  processing: { label: "En cours",   color: "#FACC15", bg: "rgba(250,204,21,0.15)",  emoji: "🔄" },
-  done:       { label: "Terminée",   color: "#25D366", bg: "rgba(37,211,102,0.15)",  emoji: "✅" },
-  cancelled:  { label: "Annulée",    color: "#EF4444", bg: "rgba(239,68,68,0.15)",   emoji: "❌" },
+  pending:     { label: "En attente",      color: "#9CA3AF", bg: "rgba(156,163,175,0.15)", emoji: "⏳" },
+  processing:  { label: "Prise en charge", color: "#3B82F6", bg: "rgba(59,130,246,0.15)",  emoji: "✅" },
+  in_progress: { label: "En livraison",   color: "#A78BFA", bg: "rgba(167,139,250,0.15)", emoji: "⚙️" },
+  done:        { label: "Terminée",        color: "#25D366", bg: "rgba(37,211,102,0.15)",  emoji: "🎉" },
+  cancelled:   { label: "Annulée",         color: "#EF4444", bg: "rgba(239,68,68,0.15)",   emoji: "❌" },
 };
 
 // Ce vers quoi on peut basculer depuis chaque état
-const NEXT: Record<string, Array<"processing" | "done" | "cancelled">> = {
-  pending:    ["processing", "cancelled"],
-  processing: ["done", "cancelled"],
-  done:       [],
-  cancelled:  [],
+const NEXT: Record<string, Array<"processing" | "in_progress" | "done" | "cancelled">> = {
+  pending:     ["processing", "cancelled"],
+  processing:  ["in_progress", "done", "cancelled"],
+  in_progress: ["done", "cancelled"],
+  done:        [],
+  cancelled:   [],
 };
 
 const FILTER_TABS = [
-  { key: "all",        label: "Toutes" },
-  { key: "pending",    label: "⏳ En attente" },
-  { key: "processing", label: "🔄 En cours" },
-  { key: "done",       label: "✅ Terminées" },
-  { key: "cancelled",  label: "❌ Annulées" },
+  { key: "all",         label: "Toutes" },
+  { key: "pending",     label: "⏳ En attente" },
+  { key: "processing",  label: "✅ Prise en charge" },
+  { key: "in_progress", label: "⚙️ En livraison" },
+  { key: "done",        label: "🎉 Terminées" },
+  { key: "cancelled",   label: "❌ Annulées" },
 ];
 
 function callAdmin(endpoint: string, body: object, adminSecret: string) {
