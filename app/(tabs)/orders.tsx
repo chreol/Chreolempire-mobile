@@ -1,7 +1,8 @@
 import { useState } from "react";
+import { useRouter } from "expo-router";
 import {
   View, Text, StyleSheet, TouchableOpacity, FlatList,
-  Alert, Linking, Modal,
+  Alert, Linking, Modal, ScrollView,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -20,19 +21,26 @@ const TYPE_CONFIG: Record<OrderType, { label: string; color: string; emoji: stri
 };
 
 const STATUS_CONFIG: Record<OrderStatus, { label: string; color: string; emoji: string }> = {
-  pending:     { label: "En attente",    color: "#F97316", emoji: "⏳" },
+  pending:     { label: "En attente",      color: "#F97316", emoji: "⏳" },
   processing:  { label: "Prise en charge", color: "#3B82F6", emoji: "✅" },
-  in_progress: { label: "En livraison", color: "#A78BFA", emoji: "⚙️" },
-  done:        { label: "Terminé",       color: "#25D366", emoji: "🎉" },
-  cancelled:   { label: "Annulé",        color: "#EF4444", emoji: "❌" },
+  in_progress: { label: "En livraison",    color: "#A78BFA", emoji: "⚙️" },
+  done:        { label: "Terminé",         color: "#25D366", emoji: "🎉" },
+  cancelled:   { label: "Annulé",          color: "#EF4444", emoji: "❌" },
 };
 
 const ALL_STATUSES: OrderStatus[] = ["pending", "processing", "in_progress", "done", "cancelled"];
 
+const FILTER_TABS: { key: OrderType | "all"; label: string }[] = [
+  { key: "all",         label: "🗂 Tous"         },
+  { key: "achat",       label: "🛒 Achat"        },
+  { key: "coupon",      label: "🎟️ Coupon"       },
+  { key: "crypto-sell", label: "₿ Vente crypto"  },
+  { key: "paypal-sell", label: "💶 Vente PayPal"  },
+  { key: "mixte",       label: "📦 Mixte"        },
+];
+
 function StatusModal({
-  entry,
-  onClose,
-  onSelect,
+  entry, onClose, onSelect,
 }: {
   entry: HistoryEntry | null;
   onClose: () => void;
@@ -76,9 +84,7 @@ function StatusModal({
 }
 
 function HistoryCard({
-  entry,
-  index,
-  onStatusPress,
+  entry, index, onStatusPress,
 }: {
   entry: HistoryEntry;
   index: number;
@@ -97,6 +103,12 @@ function HistoryCard({
   const handleRelancer = async () => {
     await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const msg = `Bonjour Chreol Empire 👋,\n\nJe souhaite relancer ma commande du ${dateStr} :\n\n📋 *Type :* ${cfg.label}\n📝 *Détails :* ${entry.summary}\n💰 *Montant :* ${entry.total.toLocaleString("fr-FR")} FCFA${entry.paymentMethod ? `\n💳 *Paiement :* ${entry.paymentMethod}` : ""}\n\nMerci de confirmer le statut.`;
+    Linking.openURL(`https://wa.me/${CONTACT.whatsapp}?text=${encodeURIComponent(msg)}`);
+  };
+
+  const handleReorder = async () => {
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const msg = `Bonjour Chreol Empire 👋,\n\nJe souhaite renouveler une commande similaire :\n\n📝 *Détails :* ${entry.summary}\n💰 *Montant précédent :* ${entry.total.toLocaleString("fr-FR")} FCFA${entry.paymentMethod ? `\n💳 *Mode de paiement :* ${entry.paymentMethod}` : ""}\n\nMerci de me confirmer la disponibilité et le montant actuel.`;
     Linking.openURL(`https://wa.me/${CONTACT.whatsapp}?text=${encodeURIComponent(msg)}`);
   };
 
@@ -139,7 +151,6 @@ function HistoryCard({
         <Text style={styles.payMethod}>💳 {entry.paymentMethod}</Text>
       )}
 
-      {/* Code cadeau livré */}
       {entry.giftCode && (
         <TouchableOpacity
           style={styles.giftCodeBox}
@@ -156,7 +167,14 @@ function HistoryCard({
         </TouchableOpacity>
       )}
 
-      {entry.status !== "done" && (
+      {/* Commander à nouveau — uniquement sur les commandes terminées d'achat */}
+      {entry.status === "done" && !isSell && (
+        <TouchableOpacity style={styles.reorderBtn} onPress={handleReorder} activeOpacity={0.8}>
+          <Text style={styles.reorderText}>🔄 Commander à nouveau</Text>
+        </TouchableOpacity>
+      )}
+
+      {entry.status !== "done" && entry.status !== "cancelled" && (
         <TouchableOpacity style={styles.relancerBtn} onPress={handleRelancer} activeOpacity={0.8}>
           <Text style={styles.relancerText}>🔁 Relancer la commande</Text>
         </TouchableOpacity>
@@ -168,6 +186,10 @@ function HistoryCard({
 export default function OrdersScreen() {
   const { history, updateStatus, clearHistory } = useHistory();
   const [statusEntry, setStatusEntry] = useState<HistoryEntry | null>(null);
+  const [filterType, setFilterType] = useState<OrderType | "all">("all");
+  const router = useRouter();
+
+  const filtered = filterType === "all" ? history : history.filter(e => e.type === filterType);
 
   const handleStatusUpdate = async (id: string, status: OrderStatus) => {
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -184,9 +206,34 @@ export default function OrdersScreen() {
         onPress: async () => {
           await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
           clearHistory();
+          router.replace("/(tabs)/services");
         },
       },
     ]
+  );
+
+  const filterChips = (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.filterRow}
+      style={styles.filterScroll}
+    >
+      {FILTER_TABS.map(tab => {
+        const isActive = filterType === tab.key;
+        const color = tab.key !== "all" ? TYPE_CONFIG[tab.key as OrderType].color : colors.brand.gold;
+        return (
+          <TouchableOpacity
+            key={tab.key}
+            style={[styles.filterChip, isActive && { borderColor: color, backgroundColor: color + "22" }]}
+            onPress={() => setFilterType(tab.key as OrderType | "all")}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.filterChipText, isActive && { color }]}>{tab.label}</Text>
+          </TouchableOpacity>
+        );
+      })}
+    </ScrollView>
   );
 
   return (
@@ -214,11 +261,17 @@ export default function OrdersScreen() {
         </MotiView>
       ) : (
         <FlatList
-          data={history}
+          data={filtered}
           keyExtractor={item => item.id}
           renderItem={({ item, index }) => (
             <HistoryCard entry={item} index={index} onStatusPress={setStatusEntry} />
           )}
+          ListHeaderComponent={filterChips}
+          ListEmptyComponent={
+            <View style={styles.emptyFiltered}>
+              <Text style={styles.emptyFilteredText}>Aucune commande dans cette catégorie</Text>
+            </View>
+          }
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
         />
@@ -237,25 +290,38 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.bg.primary },
   header: {
     flexDirection: "row", justifyContent: "space-between", alignItems: "center",
-    paddingHorizontal: 20, paddingTop: 12, paddingBottom: 16,
+    paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8,
   },
   title: { fontSize: 24, fontWeight: "800", color: colors.text.primary, letterSpacing: -0.4 },
   clearBtn: { paddingHorizontal: 10, paddingVertical: 6 },
   clearBtnText: { fontSize: 13, color: "#E50914", fontWeight: "700" },
 
-  list: { padding: 16, gap: 12, paddingBottom: 40 },
+  // Filter chips
+  filterScroll: { flexGrow: 0 },
+  filterRow: { paddingHorizontal: 16, paddingVertical: 10, gap: 8 },
+  filterChip: {
+    paddingHorizontal: 12, paddingVertical: 6,
+    borderRadius: radius.full, borderWidth: 1.5,
+    borderColor: colors.border.default, backgroundColor: colors.bg.elevated,
+  },
+  filterChipText: { fontSize: 12, fontWeight: "700", color: colors.text.muted },
+
+  list: { paddingHorizontal: 16, paddingBottom: 40, gap: 12 },
+
+  emptyState: { flex: 1, alignItems: "center", justifyContent: "center", padding: 40 },
+  emptyEmoji: { fontSize: 56, marginBottom: 16 },
+  emptyTitle: { fontSize: 20, fontWeight: "700", color: colors.text.primary, marginBottom: 8 },
+  emptySub: { fontSize: 14, color: colors.text.secondary, textAlign: "center", lineHeight: 21 },
+  emptyFiltered: { paddingVertical: 40, alignItems: "center" },
+  emptyFilteredText: { fontSize: 14, color: colors.text.muted },
 
   card: {
-    backgroundColor: colors.bg.card,
-    borderRadius: radius.xl,
+    backgroundColor: colors.bg.card, borderRadius: radius.xl,
     borderWidth: 1, borderColor: colors.border.default,
     padding: 16, gap: 10,
   },
   cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  typeTag: {
-    borderRadius: radius.full, borderWidth: 1,
-    paddingHorizontal: 10, paddingVertical: 4,
-  },
+  typeTag: { borderRadius: radius.full, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 4 },
   typeTagText: { fontSize: 11, fontWeight: "800" },
   dateText: { fontSize: 11, color: colors.text.muted },
   summary: { fontSize: 13, color: colors.text.secondary, lineHeight: 19 },
@@ -271,17 +337,19 @@ const styles = StyleSheet.create({
   statusEdit: { fontSize: 11, opacity: 0.7 },
   payMethod: { fontSize: 11, color: colors.text.muted, marginTop: -4 },
 
-  emptyState: { flex: 1, alignItems: "center", justifyContent: "center", padding: 40 },
-  emptyEmoji: { fontSize: 56, marginBottom: 16 },
-  emptyTitle: { fontSize: 20, fontWeight: "700", color: colors.text.primary, marginBottom: 8 },
-  emptySub: { fontSize: 14, color: colors.text.secondary, textAlign: "center", lineHeight: 21 },
-
   relancerBtn: {
     borderRadius: radius.full, borderWidth: 1,
     borderColor: "#25D36655", backgroundColor: "#25D36618",
     paddingVertical: 10, alignItems: "center", marginTop: 2,
   },
   relancerText: { fontSize: 13, fontWeight: "800", color: "#25D366" },
+
+  reorderBtn: {
+    borderRadius: radius.full, borderWidth: 1,
+    borderColor: colors.brand.gold + "55", backgroundColor: colors.brand.gold + "15",
+    paddingVertical: 10, alignItems: "center", marginTop: 2,
+  },
+  reorderText: { fontSize: 13, fontWeight: "800", color: colors.brand.gold },
 
   giftCodeBox: {
     borderRadius: radius.xl, borderWidth: 1.5, borderColor: colors.brand.gold + "88",

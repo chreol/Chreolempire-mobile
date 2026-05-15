@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  Linking, Alert, TextInput, KeyboardAvoidingView, Platform,
+  Linking, Alert, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator,
 } from "react-native";
+import { supabase } from "@/lib/supabase";
 import * as Clipboard from "expo-clipboard";
 import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -282,6 +283,11 @@ export default function CartScreen() {
     return { card, name, clientId, phone };
   })();
 
+  // ── Campay auto-payment ─────────────────────────────────────────────────
+  const [campayPhone,   setCampayPhone]   = useState("");
+  const [campayLoading, setCampayLoading] = useState(false);
+  const canUseCampay = !allCoupons && (payment === "mtn" || payment === "orange");
+
   // ── Formulaires par type ─────────────────────────────────────────────────
   // UBA (recharge: data parsed from cardName; uba_card: name+phone form)
   const [ubaName,  setUbaName]  = useState("");
@@ -467,10 +473,75 @@ export default function CartScreen() {
     }
   };
 
+  // ── Paiement automatique via Campay ─────────────────────────────────────
+  const handleCampayOrder = async () => {
+    if (items.length === 0) return;
+
+    if (!deliveryEmail.trim() || !deliveryEmail.includes("@")) {
+      Alert.alert("Email requis", "Veuillez saisir une adresse email valide.", [{ text: "OK" }]);
+      return;
+    }
+
+    const rawPhone = campayPhone.replace(/[\s\-().]/g, "");
+    if (rawPhone.length < 8 || rawPhone.length > 9) {
+      Alert.alert("Numéro requis", "Entrez votre numéro Mobile Money à débiter (9 chiffres, ex: 672416141).");
+      return;
+    }
+
+    if (ubaItems.length > 0 && !isUbaRecharge) {
+      if (!ubaName.trim() || !ubaPhone.trim()) {
+        Alert.alert("Infos UBA manquantes", "Veuillez renseigner votre nom et numéro."); return;
+      }
+    }
+    if (cryptoBuyItems.length > 0) {
+      if (!cbName.trim() || !cbPhone.trim()) { Alert.alert("Infos manquantes", "Nom et téléphone requis."); return; }
+    }
+
+    setCampayLoading(true);
+    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    try {
+      const effectiveItems = hasConflict ? regularItems : items;
+      const effectiveTotal = hasConflict ? regularTotal : total;
+      const summary = effectiveItems.map(i => `${i.cardName} ${i.amount}`).join(", ").slice(0, 120);
+
+      const orderId = await addEntry(
+        { type: "achat", summary, total: effectiveTotal, paymentMethod: selectedMethod.label, itemCount: effectiveItems.reduce((s, i) => s + i.qty, 0) },
+        deliveryEmail.trim(),
+        buildDetails(),
+      );
+
+      const { error } = await supabase.functions.invoke("initiate-payment", {
+        body: { order_id: orderId, phone: `237${rawPhone}` },
+      });
+
+      if (error) throw error;
+
+      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      scheduleOrderNotification("submitted", summary);
+      addStamp();
+      clearCart();
+
+      Alert.alert(
+        "⚡ Confirmation en attente",
+        `Un message ${payment === "mtn" ? "MTN MoMo" : "Orange Money"} va apparaître sur votre téléphone.\n\nApprouvez-le avec votre code secret pour confirmer le paiement.`,
+        [{ text: "OK", onPress: () => router.replace("/(tabs)/orders") }],
+      );
+    } catch {
+      Alert.alert(
+        "Paiement automatique indisponible",
+        "Le paiement automatique a échoué. Utilisez le bouton WhatsApp pour procéder manuellement.",
+        [{ text: "OK" }],
+      );
+    } finally {
+      setCampayLoading(false);
+    }
+  };
+
   const confirmClear = () => Alert.alert(
     "Vider le panier",
     "Êtes-vous sûr(e) de vouloir vider le panier ?",
-    [{ text: "Annuler", style: "cancel" }, { text: "Tout supprimer", style: "destructive", onPress: () => clearCart() }]
+    [{ text: "Annuler", style: "cancel" }, { text: "Tout supprimer", style: "destructive", onPress: () => { clearCart(); router.replace("/(tabs)/services"); } }]
   );
 
   // ── Empty state ───────────────────────────────────────────────────────────
@@ -633,9 +704,40 @@ export default function CartScreen() {
               </View>
             )}
 
+            {/* ── Campay auto-payment ── */}
+            {canUseCampay && (
+              <View style={styles.campaySection}>
+                <Text style={styles.campayTitle}>⚡ Paiement automatique — Campay</Text>
+                <Text style={styles.campaySub}>
+                  Entrez votre numéro pour recevoir directement la demande Mobile Money sur votre téléphone.
+                </Text>
+                <View style={styles.campayPhoneRow}>
+                  <View style={styles.campayPrefix}>
+                    <Text style={styles.campayPrefixText}>+237</Text>
+                  </View>
+                  <TextInput
+                    style={styles.campayPhoneInput}
+                    value={campayPhone}
+                    onChangeText={setCampayPhone}
+                    placeholder="6XX XXX XXX"
+                    placeholderTextColor={colors.text.muted}
+                    keyboardType="phone-pad"
+                    maxLength={9}
+                  />
+                </View>
+                <Text style={styles.campayNote}>
+                  Votre numéro {payment === "mtn" ? "MTN MoMo" : "Orange Money"} — le paiement sera débité automatiquement après votre approbation.
+                </Text>
+              </View>
+            )}
+
             <View style={styles.proofBox}>
               <Text style={styles.proofTitle}>📸 Preuve de paiement obligatoire</Text>
-              <Text style={styles.proofText}>Une fois votre paiement effectué, envoyez la capture d'écran de votre reçu sur WhatsApp.</Text>
+              <Text style={styles.proofText}>
+                {canUseCampay
+                  ? "Paiement automatique (⚡) : approuvez le message Mobile Money. Paiement manuel (💬) : envoyez la capture de votre reçu sur WhatsApp."
+                  : "Une fois votre paiement effectué, envoyez la capture d'écran de votre reçu sur WhatsApp."}
+              </Text>
             </View>
           </>
         )}
@@ -755,11 +857,30 @@ export default function CartScreen() {
           {!allCoupons && <Text style={[styles.bottomMethod, { color: selectedMethod.color }]}>{selectedMethod.icon} {selectedMethod.label}</Text>}
           {allCoupons && <Text style={[styles.bottomMethod, { color: "#25D366" }]}>📱 Mobile Money</Text>}
         </View>
-        <TouchableOpacity style={styles.orderBtn} onPress={handleOrder} activeOpacity={0.87}>
-          <Text style={styles.orderBtnText}>
-            {allCoupons ? "💬  Soumettre ma demande" : "💬  Valider & envoyer sur WhatsApp"}
-          </Text>
-        </TouchableOpacity>
+        {canUseCampay ? (
+          <View style={styles.dualBtnRow}>
+            <TouchableOpacity
+              style={[styles.campayBtn, campayLoading && { opacity: 0.65 }]}
+              onPress={handleCampayOrder}
+              disabled={campayLoading}
+              activeOpacity={0.87}
+            >
+              {campayLoading
+                ? <ActivityIndicator color="#0A0A0A" size="small" />
+                : <Text style={styles.campayBtnText}>⚡ Payer maintenant</Text>
+              }
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.manualBtn} onPress={handleOrder} activeOpacity={0.87}>
+              <Text style={styles.manualBtnText}>💬 WhatsApp</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <TouchableOpacity style={styles.orderBtn} onPress={handleOrder} activeOpacity={0.87}>
+            <Text style={styles.orderBtnText}>
+              {allCoupons ? "💬  Soumettre ma demande" : "💬  Valider & envoyer sur WhatsApp"}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
 
     </SafeAreaView>
@@ -878,6 +999,43 @@ const styles = StyleSheet.create({
   bottomMethod: { fontSize: 13, fontWeight: "700" },
   orderBtn: { backgroundColor: "#25D366", borderRadius: radius.full, paddingVertical: 16, alignItems: "center", justifyContent: "center", shadowColor: "#25D366", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.4, shadowRadius: 10, elevation: 6 },
   orderBtnText: { fontSize: 15, fontWeight: "800", color: "#fff" },
+  // Campay
+  campaySection: {
+    backgroundColor: colors.bg.card, borderRadius: radius.xl,
+    borderWidth: 1.5, borderColor: colors.brand.gold + "55",
+    padding: 16, gap: 10,
+  },
+  campayTitle: { fontSize: 13, fontWeight: "800", color: colors.brand.gold },
+  campaySub: { fontSize: 11, color: colors.text.muted, lineHeight: 16 },
+  campayPhoneRow: { flexDirection: "row", alignItems: "center" },
+  campayPrefix: {
+    backgroundColor: colors.bg.elevated, paddingHorizontal: 12, paddingVertical: 14,
+    borderWidth: 1, borderColor: colors.border.default, borderRightWidth: 0,
+    borderTopLeftRadius: radius.md, borderBottomLeftRadius: radius.md,
+  },
+  campayPrefixText: { fontSize: 14, fontWeight: "700", color: colors.text.secondary },
+  campayPhoneInput: {
+    flex: 1, backgroundColor: colors.bg.elevated, color: colors.text.primary, fontSize: 14,
+    borderWidth: 1, borderColor: colors.border.default,
+    borderTopRightRadius: radius.md, borderBottomRightRadius: radius.md,
+    paddingHorizontal: 14, paddingVertical: 14,
+  },
+  campayNote: { fontSize: 10, color: colors.text.muted, lineHeight: 15 },
+  // Dual buttons
+  dualBtnRow: { flexDirection: "row", gap: 8 },
+  campayBtn: {
+    flex: 1.8, backgroundColor: colors.brand.gold, borderRadius: radius.full,
+    paddingVertical: 15, alignItems: "center", justifyContent: "center",
+    shadowColor: colors.brand.gold, shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.4, shadowRadius: 10, elevation: 6,
+  },
+  campayBtnText: { color: "#0A0A0A", fontSize: 14, fontWeight: "900" },
+  manualBtn: {
+    flex: 1, backgroundColor: "#25D36618", borderRadius: radius.full,
+    borderWidth: 1.5, borderColor: "#25D36655",
+    paddingVertical: 15, alignItems: "center", justifyContent: "center",
+  },
+  manualBtnText: { color: "#25D366", fontSize: 13, fontWeight: "800" },
   // Empty
   emptyState: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
   emptyTitle: { fontSize: 22, fontWeight: "800", color: colors.text.primary },

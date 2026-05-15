@@ -15,7 +15,7 @@ function PromoCard({ promo }: { promo: Promo }) {
     <TouchableOpacity
       style={[styles.card, { backgroundColor: promo.color + "18", borderColor: promo.color + "55" }]}
       activeOpacity={0.85}
-      onPress={() => router.push("/services/cartes-cadeaux")}
+      onPress={() => router.push((promo.route ?? "/services/cartes-cadeaux") as any)}
     >
       <View style={styles.cardLeft}>
         {promo.badge && (

@@ -1,13 +1,13 @@
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   Linking, Dimensions, Modal, TextInput,
-  KeyboardAvoidingView, Platform, Pressable,
+  KeyboardAvoidingView, Platform, Pressable, RefreshControl,
 } from "react-native";
 import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { MotiView } from "moti";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { colors, radius } from "@/constants/theme";
 import RateTicker from "@/components/RateTicker";
 import PromoBanner from "@/components/PromoBanner";
@@ -40,6 +40,15 @@ export default function HomeScreen() {
   const [contactOpen, setContactOpen] = useState(false);
   const [pseudo, setPseudo] = useState("");
   const [msgText, setMsgText] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
+  const [promoKey, setPromoKey] = useState(0);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    setPromoKey(k => k + 1);
+    await new Promise<void>(r => setTimeout(r, 900));
+    setRefreshing(false);
+  }, []);
 
   const openWhatsApp = () =>
     Linking.openURL(
@@ -136,7 +145,13 @@ export default function HomeScreen() {
       {/* ── Banderole taux défilante ── */}
       <RateTicker />
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 130 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 130 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand.gold} colors={[colors.brand.gold]} />
+        }
+      >
 
         {/* ── Hero Banner (photo seule, sans overlays) ── */}
         <MotiView
@@ -151,7 +166,7 @@ export default function HomeScreen() {
         </MotiView>
 
         {/* ── Bannière promotions ── */}
-        <PromoBanner />
+        <PromoBanner key={promoKey} />
 
         {/* ── Service Cards 2×2 ── */}
         <View style={styles.grid}>

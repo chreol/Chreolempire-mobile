@@ -21,7 +21,7 @@ export interface HistoryEntry {
 
 interface HistoryContextType {
   history: HistoryEntry[];
-  addEntry: (entry: Omit<HistoryEntry, "id" | "date" | "status" | "giftCode">, email?: string, details?: Record<string, string> | null) => Promise<void>;
+  addEntry: (entry: Omit<HistoryEntry, "id" | "date" | "status" | "giftCode">, email?: string, details?: Record<string, string> | null) => Promise<string>;
   updateStatus: (id: string, status: OrderStatus) => Promise<void>;
   clearHistory: () => Promise<void>;
 }
@@ -178,6 +178,8 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
         }).catch(() => { /* silencieux si hors ligne */ });
       }
     } catch { /* hors ligne — l'ordre est sauvegardé localement */ }
+
+    return newEntry.id;
   }, []);
 
   const updateStatus = useCallback(async (id: string, status: OrderStatus) => {
